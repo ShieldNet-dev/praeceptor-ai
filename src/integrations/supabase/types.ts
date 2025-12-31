@@ -14,7 +14,199 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          track: Database["public"]["Enums"]["guidance_track"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          track: Database["public"]["Enums"]["guidance_track"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          track?: Database["public"]["Enums"]["guidance_track"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_progress: {
+        Row: {
+          created_at: string
+          id: string
+          last_activity_at: string
+          lessons_completed: number
+          streak_days: number
+          total_messages: number
+          total_sessions: number
+          track: Database["public"]["Enums"]["guidance_track"]
+          updated_at: string
+          user_id: string
+          xp_points: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_activity_at?: string
+          lessons_completed?: number
+          streak_days?: number
+          total_messages?: number
+          total_sessions?: number
+          track: Database["public"]["Enums"]["guidance_track"]
+          updated_at?: string
+          user_id: string
+          xp_points?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_activity_at?: string
+          lessons_completed?: number
+          streak_days?: number
+          total_messages?: number
+          total_sessions?: number
+          track?: Database["public"]["Enums"]["guidance_track"]
+          updated_at?: string
+          user_id?: string
+          xp_points?: number
+        }
+        Relationships: []
+      }
+      user_tracks: {
+        Row: {
+          id: string
+          selected_at: string
+          track: Database["public"]["Enums"]["guidance_track"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          selected_at?: string
+          track: Database["public"]["Enums"]["guidance_track"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          selected_at?: string
+          track?: Database["public"]["Enums"]["guidance_track"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_uploads: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          file_name: string
+          file_size: number
+          file_type: string
+          id: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          file_name: string
+          file_size: number
+          file_type: string
+          id?: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_uploads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +215,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      guidance_track:
+        | "learning"
+        | "mentorship"
+        | "exam_prep"
+        | "siwes"
+        | "academic"
+        | "career"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +348,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      guidance_track: [
+        "learning",
+        "mentorship",
+        "exam_prep",
+        "siwes",
+        "academic",
+        "career",
+      ],
+    },
   },
 } as const

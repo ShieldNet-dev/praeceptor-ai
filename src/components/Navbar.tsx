@@ -47,10 +47,10 @@ const Navbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => window.location.href = '/auth'}>
               Sign In
             </Button>
-            <Button variant="default" size="sm">
+            <Button variant="default" size="sm" onClick={() => window.location.href = '/auth'}>
               Get Started
             </Button>
           </div>
