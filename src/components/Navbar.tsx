@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Menu, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -47,10 +49,10 @@ const Navbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => window.location.href = '/auth'}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
               Sign In
             </Button>
-            <Button variant="default" size="sm" onClick={() => window.location.href = '/auth'}>
+            <Button variant="default" size="sm" onClick={() => navigate('/auth')}>
               Get Started
             </Button>
           </div>
@@ -78,10 +80,10 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                <Button variant="ghost" className="justify-start">
+                <Button variant="ghost" className="justify-start" onClick={() => navigate('/auth')}>
                   Sign In
                 </Button>
-                <Button variant="default">
+                <Button variant="default" onClick={() => navigate('/auth')}>
                   Get Started
                 </Button>
               </div>
