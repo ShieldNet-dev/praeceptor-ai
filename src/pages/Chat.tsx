@@ -12,12 +12,14 @@ import {
   User,
   X,
   FileText,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { GuidanceTrack, getTrackById } from '@/types/tracks';
 import { toast } from 'sonner';
+import VoiceInput from '@/components/VoiceInput';
 
 interface Message {
   id: string;
@@ -325,6 +327,13 @@ const Chat = () => {
               <p className="text-xs text-muted-foreground">Praeceptor AI</p>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/settings')}
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
         </div>
       </header>
 
@@ -451,13 +460,17 @@ const Chat = () => {
                 <Paperclip className="w-5 h-5" />
               )}
             </Button>
+            <VoiceInput 
+              onTranscript={(text) => setInput((prev) => prev + (prev ? ' ' : '') + text)}
+              disabled={sending}
+            />
             <Textarea
               placeholder="Ask Praeceptor AI anything..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={1}
-              className="resize-none min-h-[44px] max-h-32"
+              className="resize-none min-h-[44px] max-h-32 flex-1"
             />
             <Button
               variant="hero"
