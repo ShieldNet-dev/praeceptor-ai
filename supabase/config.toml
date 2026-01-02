@@ -1,1 +1,7 @@
 project_id = "hnmfaovpcaaqelwuzzhz"
+
+[functions.praeceptor-chat]
+verify_jwt = false
+
+[functions.voice-to-text]
+verify_jwt = false
