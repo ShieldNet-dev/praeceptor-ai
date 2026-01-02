@@ -4,8 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Shield,
   ArrowLeft,
@@ -18,7 +24,11 @@ import {
   Check,
   Star,
   Save,
-  Camera
+  Camera,
+  Smartphone,
+  Fingerprint,
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +48,13 @@ const Settings = () => {
   const [userTracks, setUserTracks] = useState<GuidanceTrack[]>([]);
   const [selectedTracks, setSelectedTracks] = useState<GuidanceTrack[]>([]);
   const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+  const [showMfaDialog, setShowMfaDialog] = useState(false);
+  const [mfaQrCode, setMfaQrCode] = useState<string>('');
+  const [mfaSecret, setMfaSecret] = useState<string>('');
+  const [mfaVerifyCode, setMfaVerifyCode] = useState('');
+  const [mfaEnrolling, setMfaEnrolling] = useState(false);
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [existingReview, setExistingReview] = useState<{ id: string; rating: number; review_text: string } | null>(null);
@@ -94,7 +111,17 @@ const Settings = () => {
         // Check MFA status
         const { data: factors } = await supabase.auth.mfa.listFactors();
         if (factors?.totp && factors.totp.length > 0) {
-          setMfaEnabled(factors.totp.some(f => f.status === 'verified'));
+          const verifiedFactor = factors.totp.find(f => f.status === 'verified');
+          if (verifiedFactor) {
+            setMfaEnabled(true);
+            setMfaFactorId(verifiedFactor.id);
+          }
+        }
+        
+        // Check if biometrics credential is stored locally
+        const storedBiometrics = localStorage.getItem(`biometrics_${user.id}`);
+        if (storedBiometrics) {
+          setBiometricsEnabled(true);
         }
       } catch (error) {
         console.error('Error fetching settings data:', error);
@@ -184,16 +211,132 @@ const Settings = () => {
   };
 
   const handleEnableMFA = async () => {
+    setMfaEnrolling(true);
     try {
       const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
       if (error) throw error;
-
-      // In a real implementation, you'd show a QR code for the user to scan
-      toast.info('MFA enrollment started. Please scan the QR code with your authenticator app.');
-      console.log('TOTP setup:', data);
+      
+      if (data?.totp?.qr_code && data?.totp?.secret) {
+        setMfaQrCode(data.totp.qr_code);
+        setMfaSecret(data.totp.secret);
+        setMfaFactorId(data.id);
+        setShowMfaDialog(true);
+      }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to enable MFA');
+      toast.error(error.message || 'Failed to start MFA enrollment');
+    } finally {
+      setMfaEnrolling(false);
     }
+  };
+
+  const handleVerifyMFA = async () => {
+    if (!mfaFactorId || mfaVerifyCode.length !== 6) {
+      toast.error('Please enter a valid 6-digit code');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeError) throw challengeError;
+      
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challenge.id,
+        code: mfaVerifyCode
+      });
+      
+      if (verifyError) throw verifyError;
+      
+      setMfaEnabled(true);
+      setShowMfaDialog(false);
+      setMfaVerifyCode('');
+      toast.success('Two-Factor Authentication enabled successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to verify code');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDisableMFA = async () => {
+    if (!mfaFactorId) return;
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+      if (error) throw error;
+      
+      setMfaEnabled(false);
+      setMfaFactorId(null);
+      toast.success('Two-Factor Authentication disabled');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to disable MFA');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEnableBiometrics = async () => {
+    if (!user) return;
+    
+    try {
+      // Check if WebAuthn is supported
+      if (!window.PublicKeyCredential) {
+        toast.error('Biometric authentication is not supported on this device');
+        return;
+      }
+      
+      // Create credential options
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      
+      const createCredentialOptions: CredentialCreationOptions = {
+        publicKey: {
+          challenge,
+          rp: {
+            name: 'Praeceptor AI',
+            id: window.location.hostname
+          },
+          user: {
+            id: new TextEncoder().encode(user.id),
+            name: user.email || 'user',
+            displayName: profile.full_name || user.email || 'User'
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: 'public-key' },
+            { alg: -257, type: 'public-key' }
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required'
+          },
+          timeout: 60000
+        }
+      };
+      
+      const credential = await navigator.credentials.create(createCredentialOptions);
+      
+      if (credential) {
+        // Store credential ID locally
+        localStorage.setItem(`biometrics_${user.id}`, 'enabled');
+        setBiometricsEnabled(true);
+        toast.success('Biometric authentication enabled!');
+      }
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        toast.error('Biometric registration was cancelled');
+      } else {
+        toast.error('Failed to enable biometric authentication');
+      }
+    }
+  };
+
+  const handleDisableBiometrics = () => {
+    if (!user) return;
+    localStorage.removeItem(`biometrics_${user.id}`);
+    setBiometricsEnabled(false);
+    toast.success('Biometric authentication disabled');
   };
 
   const handleSubmitReview = async () => {
@@ -408,72 +551,161 @@ const Settings = () => {
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
             <div className="glass rounded-xl p-6 cyber-border">
-              <h2 className="text-lg font-semibold mb-4">Security Settings</h2>
+              <h2 className="text-lg font-semibold mb-2">Multi-Factor Authentication (MFA)</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Enhance your account security with additional authentication methods.
+              </p>
               
-              <div className="space-y-6">
-                {/* MFA Section */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
+              <div className="space-y-4">
+                {/* TOTP Authenticator */}
+                <button
+                  onClick={() => mfaEnabled ? handleDisableMFA() : handleEnableMFA()}
+                  disabled={saving || mfaEnrolling}
+                  className="w-full flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                >
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-primary/20">
-                      <Shield className="w-5 h-5 text-primary" />
+                      <Smartphone className="w-5 h-5 text-primary" />
                     </div>
-                    <div>
-                      <h3 className="font-medium">Two-Factor Authentication (2FA)</h3>
+                    <div className="text-left">
+                      <h3 className="font-medium">Authenticator App</h3>
                       <p className="text-sm text-muted-foreground">
-                        Add an extra layer of security with authenticator app
+                        Use Google Authenticator, Authy, or similar apps
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     {mfaEnabled ? (
-                      <span className="text-sm text-emerald-500 font-medium">Enabled</span>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={handleEnableMFA}>
-                        Enable
-                      </Button>
-                    )}
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/20 text-emerald-500">
+                        Enabled
+                      </span>
+                    ) : mfaEnrolling ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    ) : null}
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
                   </div>
-                </div>
+                </button>
 
-                {/* Biometrics Info */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
+                {/* Biometrics */}
+                <button
+                  onClick={() => biometricsEnabled ? handleDisableBiometrics() : handleEnableBiometrics()}
+                  disabled={saving || (typeof window !== 'undefined' && !('PublicKeyCredential' in window))}
+                  className="w-full flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <div className="flex items-center gap-4">
                     <div className="p-2 rounded-lg bg-accent/20">
-                      <Lock className="w-5 h-5 text-accent" />
+                      <Fingerprint className="w-5 h-5 text-accent" />
                     </div>
-                    <div>
+                    <div className="text-left">
                       <h3 className="font-medium">Biometric Authentication</h3>
                       <p className="text-sm text-muted-foreground">
-                        Use fingerprint or face recognition (device dependent)
+                        Use fingerprint or face recognition
                       </p>
                     </div>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {typeof window !== 'undefined' && 'PublicKeyCredential' in window 
-                      ? 'Available' 
-                      : 'Not supported'}
-                  </span>
-                </div>
+                  <div className="flex items-center gap-3">
+                    {biometricsEnabled ? (
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/20 text-emerald-500">
+                        Enabled
+                      </span>
+                    ) : typeof window !== 'undefined' && !('PublicKeyCredential' in window) ? (
+                      <span className="text-xs text-muted-foreground">Not supported</span>
+                    ) : null}
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                </button>
+              </div>
+            </div>
 
-                {/* Password Change Link */}
-                <div className="pt-4 border-t border-border">
-                  <Button 
-                    variant="outline" 
-                    onClick={async () => {
-                      const { error } = await supabase.auth.resetPasswordForEmail(user?.email || '');
-                      if (error) {
-                        toast.error(error.message);
-                      } else {
-                        toast.success('Password reset email sent');
-                      }
+            {/* Password Section */}
+            <div className="glass rounded-xl p-6 cyber-border">
+              <h2 className="text-lg font-semibold mb-4">Password</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Change your password by receiving a reset link via email.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={async () => {
+                  const { error } = await supabase.auth.resetPasswordForEmail(user?.email || '');
+                  if (error) {
+                    toast.error(error.message);
+                  } else {
+                    toast.success('Password reset email sent');
+                  }
+                }}
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Change Password
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* MFA Enrollment Dialog */}
+          <Dialog open={showMfaDialog} onOpenChange={setShowMfaDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Set Up Authenticator App</DialogTitle>
+                <DialogDescription>
+                  Scan the QR code with your authenticator app, then enter the 6-digit code to verify.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-4">
+                {/* QR Code */}
+                {mfaQrCode && (
+                  <div className="flex justify-center">
+                    <div className="p-4 bg-white rounded-lg">
+                      <img src={mfaQrCode} alt="MFA QR Code" className="w-48 h-48" />
+                    </div>
+                  </div>
+                )}
+                
+                {/* Manual Secret */}
+                {mfaSecret && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Can't scan? Enter this code manually:</Label>
+                    <div className="p-3 bg-muted rounded-lg font-mono text-sm text-center break-all select-all">
+                      {mfaSecret}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Verification Code Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="mfa-code">Enter 6-digit code</Label>
+                  <Input
+                    id="mfa-code"
+                    value={mfaVerifyCode}
+                    onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    className="text-center text-2xl tracking-widest font-mono"
+                    maxLength={6}
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowMfaDialog(false);
+                      setMfaVerifyCode('');
                     }}
+                    className="flex-1"
                   >
-                    Change Password
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleVerifyMFA}
+                    disabled={saving || mfaVerifyCode.length !== 6}
+                    className="flex-1"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Verify & Enable
                   </Button>
                 </div>
               </div>
-            </div>
-          </TabsContent>
+            </DialogContent>
+          </Dialog>
 
           {/* Feedback Tab */}
           <TabsContent value="feedback" className="space-y-6">

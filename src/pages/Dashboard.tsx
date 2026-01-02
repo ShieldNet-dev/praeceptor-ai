@@ -9,7 +9,6 @@ import {
   Clock, 
   Plus,
   Loader2,
-  LogOut,
   ChevronRight,
   Settings
 } from 'lucide-react';
@@ -39,7 +38,7 @@ const Dashboard = () => {
   const [progress, setProgress] = useState<UserProgress[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -107,10 +106,6 @@ const Dashboard = () => {
     navigate(`/chat?conversation=${conversationId}`);
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
 
   const totalXP = progress.reduce((acc, p) => acc + p.xp_points, 0);
   const totalSessions = progress.reduce((acc, p) => acc + p.total_sessions, 0);
@@ -141,15 +136,15 @@ const Dashboard = () => {
             </div>
             <span className="text-lg font-bold text-foreground">Praeceptor AI</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
-              <Settings className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/settings')}
+            className="gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Settings</span>
+          </Button>
         </div>
       </header>
 
