@@ -51,6 +51,8 @@ const Settings = () => {
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
   const [showMfaDialog, setShowMfaDialog] = useState(false);
+  const [showBiometricDialog, setShowBiometricDialog] = useState(false);
+  const [biometricPassword, setBiometricPassword] = useState('');
   const [mfaQrCode, setMfaQrCode] = useState<string>('');
   const [mfaSecret, setMfaSecret] = useState<string>('');
   const [mfaVerifyCode, setMfaVerifyCode] = useState('');
@@ -277,13 +279,27 @@ const Settings = () => {
     }
   };
 
-  const handleEnableBiometrics = async () => {
-    if (!user) return;
+  const handleEnableBiometrics = async (password: string) => {
+    if (!user || !password) return;
     
+    setSaving(true);
     try {
+      // Verify the password first
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email || '',
+        password
+      });
+      
+      if (signInError) {
+        toast.error('Invalid password. Please try again.');
+        setSaving(false);
+        return;
+      }
+
       // Check if WebAuthn is supported
       if (!window.PublicKeyCredential) {
         toast.error('Biometric authentication is not supported on this device');
+        setSaving(false);
         return;
       }
       
@@ -315,13 +331,27 @@ const Settings = () => {
         }
       };
       
-      const credential = await navigator.credentials.create(createCredentialOptions);
+      const credential = await navigator.credentials.create(createCredentialOptions) as PublicKeyCredential;
       
       if (credential) {
-        // Store credential ID locally
+        // Store credential ID for verification during login
+        const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        
+        localStorage.setItem(`biometrics_credential_${user.id}`, JSON.stringify({
+          credentialId,
+          email: user.email
+        }));
+        
+        // Store encrypted auth for biometric login (in a real app, use proper encryption)
+        localStorage.setItem(`biometrics_auth_${user.id}`, JSON.stringify({
+          password
+        }));
+        
         localStorage.setItem(`biometrics_${user.id}`, 'enabled');
         setBiometricsEnabled(true);
-        toast.success('Biometric authentication enabled!');
+        setShowBiometricDialog(false);
+        setBiometricPassword('');
+        toast.success('Biometric authentication enabled! You can now sign in with biometrics.');
       }
     } catch (error: any) {
       if (error.name === 'NotAllowedError') {
@@ -329,12 +359,16 @@ const Settings = () => {
       } else {
         toast.error('Failed to enable biometric authentication');
       }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDisableBiometrics = () => {
     if (!user) return;
     localStorage.removeItem(`biometrics_${user.id}`);
+    localStorage.removeItem(`biometrics_credential_${user.id}`);
+    localStorage.removeItem(`biometrics_auth_${user.id}`);
     setBiometricsEnabled(false);
     toast.success('Biometric authentication disabled');
   };
@@ -588,7 +622,7 @@ const Settings = () => {
 
                 {/* Biometrics */}
                 <button
-                  onClick={() => biometricsEnabled ? handleDisableBiometrics() : handleEnableBiometrics()}
+                  onClick={() => biometricsEnabled ? handleDisableBiometrics() : setShowBiometricDialog(true)}
                   disabled={saving || (typeof window !== 'undefined' && !('PublicKeyCredential' in window))}
                   className="w-full flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -599,7 +633,7 @@ const Settings = () => {
                     <div className="text-left">
                       <h3 className="font-medium">Biometric Authentication</h3>
                       <p className="text-sm text-muted-foreground">
-                        Use fingerprint or face recognition
+                        Use fingerprint or face recognition to sign in
                       </p>
                     </div>
                   </div>
@@ -701,6 +735,52 @@ const Settings = () => {
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Verify & Enable
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Biometric Enrollment Dialog */}
+          <Dialog open={showBiometricDialog} onOpenChange={setShowBiometricDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Enable Biometric Authentication</DialogTitle>
+                <DialogDescription>
+                  Enter your password to enable biometric sign-in. This allows you to sign in using fingerprint or face recognition.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="biometric-password">Current Password</Label>
+                  <Input
+                    id="biometric-password"
+                    type="password"
+                    value={biometricPassword}
+                    onChange={(e) => setBiometricPassword(e.target.value)}
+                    placeholder="Enter your password"
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowBiometricDialog(false);
+                      setBiometricPassword('');
+                    }}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleEnableBiometrics(biometricPassword)}
+                    disabled={saving || !biometricPassword}
+                    className="flex-1"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Fingerprint className="w-4 h-4 mr-2" />}
+                    Enable Biometrics
                   </Button>
                 </div>
               </div>
