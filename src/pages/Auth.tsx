@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, ArrowLeft, Loader2, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Shield, ArrowLeft, Loader2, Eye, EyeOff, Check, X, Fingerprint } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -45,6 +46,21 @@ const getPasswordStrength = (password: string): PasswordStrength => {
   return { score, label: 'Very Strong', color: 'bg-green-500', checks };
 };
 
+// Helper to check if biometrics are available for any user
+const checkBiometricsAvailable = (): string | null => {
+  if (typeof window === 'undefined' || !('PublicKeyCredential' in window)) {
+    return null;
+  }
+  // Check all localStorage keys for biometric credentials
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('biometrics_credential_')) {
+      return key.replace('biometrics_credential_', '');
+    }
+  }
+  return null;
+};
+
 const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -53,14 +69,28 @@ const Auth = () => {
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string; fullName?: string }>({});
+  const [biometricUserId, setBiometricUserId] = useState<string | null>(null);
   
   const { signIn, signUp, signInWithGoogle, resetPassword, user } = useAuth();
   const navigate = useNavigate();
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/onboarding');
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    // Check if biometric login is available
+    const userId = checkBiometricsAvailable();
+    setBiometricUserId(userId);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -161,6 +191,72 @@ const Auth = () => {
     }
   };
 
+  const handleBiometricSignIn = async () => {
+    if (!biometricUserId) return;
+    
+    setBiometricLoading(true);
+    try {
+      // Get stored credential data
+      const credentialData = localStorage.getItem(`biometrics_credential_${biometricUserId}`);
+      if (!credentialData) {
+        toast.error('No biometric credentials found. Please sign in with password.');
+        setBiometricLoading(false);
+        return;
+      }
+
+      const { credentialId, email: storedEmail } = JSON.parse(credentialData);
+      
+      // Create assertion challenge
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+      
+      const getCredentialOptions: CredentialRequestOptions = {
+        publicKey: {
+          challenge,
+          allowCredentials: [{
+            id: Uint8Array.from(atob(credentialId), c => c.charCodeAt(0)),
+            type: 'public-key',
+            transports: ['internal']
+          }],
+          userVerification: 'required',
+          timeout: 60000
+        }
+      };
+      
+      const assertion = await navigator.credentials.get(getCredentialOptions);
+      
+      if (assertion) {
+        // Get the stored password for this user (encrypted in localStorage)
+        const storedAuth = localStorage.getItem(`biometrics_auth_${biometricUserId}`);
+        if (!storedAuth) {
+          toast.error('Biometric credentials expired. Please sign in with password and re-enable biometrics.');
+          setBiometricLoading(false);
+          return;
+        }
+        
+        const { password: storedPassword } = JSON.parse(storedAuth);
+        
+        // Sign in with stored credentials
+        const { error } = await signIn(storedEmail, storedPassword);
+        
+        if (error) {
+          toast.error('Biometric authentication failed. Please sign in with password.');
+        } else {
+          toast.success('Welcome back!');
+          navigate('/onboarding');
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        toast.error('Biometric authentication was cancelled');
+      } else {
+        toast.error('Biometric authentication failed. Please sign in with password.');
+      }
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
   const switchMode = (newMode: AuthMode) => {
     setMode(newMode);
     setErrors({});
@@ -214,15 +310,33 @@ const Auth = () => {
             {mode === 'forgot' && "Enter your email and we'll send you a reset link"}
           </p>
 
-          {/* Google Sign In Button - only show for login/signup */}
+          {/* Sign-in options - only show for login/signup */}
           {mode !== 'forgot' && (
             <>
+              {/* Biometric Sign In - only show if available and in login mode */}
+              {mode === 'login' && biometricUserId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mb-3 gap-3 border-accent/50 hover:border-accent hover:bg-accent/10"
+                  onClick={handleBiometricSignIn}
+                  disabled={biometricLoading || loading || googleLoading}
+                >
+                  {biometricLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Fingerprint className="w-5 h-5 text-accent" />
+                  )}
+                  Sign in with Biometrics
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
                 className="w-full mb-6 gap-3"
                 onClick={handleGoogleSignIn}
-                disabled={googleLoading || loading}
+                disabled={googleLoading || loading || biometricLoading}
               >
                 {googleLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

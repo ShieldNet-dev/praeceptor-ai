@@ -38,6 +38,7 @@ const Dashboard = () => {
   const [progress, setProgress] = useState<UserProgress[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -52,6 +53,11 @@ const Dashboard = () => {
       if (!user) return;
 
       try {
+        // Check if user is admin
+        const { data: isAdminData } = await supabase
+          .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+        setIsAdmin(isAdminData === true);
+
         // Fetch user tracks
         const { data: tracksData, error: tracksError } = await supabase
           .from('user_tracks')
@@ -136,15 +142,28 @@ const Dashboard = () => {
             </div>
             <span className="text-lg font-bold text-foreground">Praeceptor AI</span>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/settings')}
-            className="gap-2"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/admin/reviews')}
+                className="gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/settings')}
+              className="gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Button>
+          </div>
         </div>
       </header>
 
