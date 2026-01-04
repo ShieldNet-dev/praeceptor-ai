@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Shield, 
   MessageSquare, 
@@ -10,7 +11,10 @@ import {
   Plus,
   Loader2,
   ChevronRight,
-  Settings
+  Settings,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +43,8 @@ const Dashboard = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [editingConvId, setEditingConvId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -112,7 +118,42 @@ const Dashboard = () => {
     navigate(`/chat?conversation=${conversationId}`);
   };
 
+  const handleStartRename = (conv: Conversation) => {
+    setEditingConvId(conv.id);
+    setEditingTitle(conv.title);
+  };
 
+  const handleCancelRename = () => {
+    setEditingConvId(null);
+    setEditingTitle('');
+  };
+
+  const handleSaveRename = async (convId: string) => {
+    if (!editingTitle.trim()) {
+      toast.error('Title cannot be empty');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({ title: editingTitle.trim() })
+        .eq('id', convId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setConversations((prev) =>
+        prev.map((c) => (c.id === convId ? { ...c, title: editingTitle.trim() } : c))
+      );
+      toast.success('Conversation renamed');
+    } catch (error) {
+      toast.error('Failed to rename conversation');
+    } finally {
+      setEditingConvId(null);
+      setEditingTitle('');
+    }
+  };
   const totalXP = progress.reduce((acc, p) => acc + p.xp_points, 0);
   const totalSessions = progress.reduce((acc, p) => acc + p.total_sessions, 0);
   const maxStreak = Math.max(...progress.map((p) => p.streak_days), 0);
@@ -260,26 +301,79 @@ const Dashboard = () => {
                 const track = getTrackById(conv.track);
                 if (!track) return null;
                 const IconComponent = track.icon;
+                const isEditing = editingConvId === conv.id;
 
                 return (
-                  <button
+                  <div
                     key={conv.id}
-                    onClick={() => handleContinueChat(conv.id)}
-                    className="w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors text-left"
+                    className="w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors"
                   >
                     <div
-                      className={`p-2 rounded-lg bg-gradient-to-br ${track.color} text-white`}
+                      className={`p-2 rounded-lg bg-gradient-to-br ${track.color} text-white flex-shrink-0`}
                     >
                       <IconComponent className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{conv.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {track.name} • {new Date(conv.updated_at).toLocaleDateString()}
-                      </p>
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveRename(conv.id);
+                              if (e.key === 'Escape') handleCancelRename();
+                            }}
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0"
+                            onClick={() => handleSaveRename(conv.id)}
+                          >
+                            <Check className="w-4 h-4 text-green-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0"
+                            onClick={handleCancelRename}
+                          >
+                            <X className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleContinueChat(conv.id)}
+                          className="text-left w-full"
+                        >
+                          <p className="font-medium text-foreground truncate">{conv.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {track.name} • {new Date(conv.updated_at).toLocaleDateString()}
+                          </p>
+                        </button>
+                      )}
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  </button>
+                    {!isEditing && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartRename(conv);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                        <button onClick={() => handleContinueChat(conv.id)}>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 );
               })}
             </div>
