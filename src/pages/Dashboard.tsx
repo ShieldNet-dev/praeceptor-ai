@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,9 @@ import {
   Settings,
   Pencil,
   Check,
-  X
+  X,
+  Trash2,
+  Search
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +47,7 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [editingConvId, setEditingConvId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -154,6 +157,41 @@ const Dashboard = () => {
       setEditingTitle('');
     }
   };
+
+  const handleDeleteConversation = async (convId: string) => {
+    if (!confirm('Are you sure you want to delete this conversation?')) return;
+
+    try {
+      // Delete messages first (foreign key constraint)
+      await supabase.from('messages').delete().eq('conversation_id', convId);
+      
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', convId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+      toast.success('Conversation deleted');
+    } catch (error) {
+      toast.error('Failed to delete conversation');
+    }
+  };
+
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const query = searchQuery.toLowerCase();
+    return conversations.filter((conv) => {
+      const track = getTrackById(conv.track);
+      return (
+        conv.title.toLowerCase().includes(query) ||
+        track?.name.toLowerCase().includes(query)
+      );
+    });
+  }, [conversations, searchQuery]);
+
   const totalXP = progress.reduce((acc, p) => acc + p.xp_points, 0);
   const totalSessions = progress.reduce((acc, p) => acc + p.total_sessions, 0);
   const maxStreak = Math.max(...progress.map((p) => p.streak_days), 0);
@@ -295,87 +333,117 @@ const Dashboard = () => {
         {/* Recent conversations */}
         {conversations.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">Recent Conversations</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Recent Conversations</h2>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search conversations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
+              </div>
+            </div>
             <div className="glass rounded-xl divide-y divide-border/50 cyber-border overflow-hidden">
-              {conversations.map((conv) => {
-                const track = getTrackById(conv.track);
-                if (!track) return null;
-                const IconComponent = track.icon;
-                const isEditing = editingConvId === conv.id;
+              {filteredConversations.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  No conversations found
+                </div>
+              ) : (
+                filteredConversations.map((conv) => {
+                  const track = getTrackById(conv.track);
+                  if (!track) return null;
+                  const IconComponent = track.icon;
+                  const isEditing = editingConvId === conv.id;
 
-                return (
-                  <div
-                    key={conv.id}
-                    className="w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors"
-                  >
+                  return (
                     <div
-                      className={`p-2 rounded-lg bg-gradient-to-br ${track.color} text-white flex-shrink-0`}
+                      key={conv.id}
+                      className="w-full p-4 flex items-center gap-4 hover:bg-secondary/50 transition-colors"
                     >
-                      <IconComponent className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {isEditing ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveRename(conv.id);
-                              if (e.key === 'Escape') handleCancelRename();
+                      <div
+                        className={`p-2 rounded-lg bg-gradient-to-br ${track.color} text-white flex-shrink-0`}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveRename(conv.id);
+                                if (e.key === 'Escape') handleCancelRename();
+                              }}
+                              className="h-8 text-sm"
+                              autoFocus
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 flex-shrink-0"
+                              onClick={() => handleSaveRename(conv.id)}
+                            >
+                              <Check className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 flex-shrink-0"
+                              onClick={handleCancelRename}
+                            >
+                              <X className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleContinueChat(conv.id)}
+                            className="text-left w-full"
+                          >
+                            <p className="font-medium text-foreground truncate">{conv.title}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {track.name} • {new Date(conv.updated_at).toLocaleDateString()}
+                            </p>
+                          </button>
+                        )}
+                      </div>
+                      {!isEditing && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartRename(conv);
                             }}
-                            className="h-8 text-sm"
-                            autoFocus
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 flex-shrink-0"
-                            onClick={() => handleSaveRename(conv.id)}
+                            title="Rename"
                           >
-                            <Check className="w-4 h-4 text-green-500" />
+                            <Pencil className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 flex-shrink-0"
-                            onClick={handleCancelRename}
+                            className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteConversation(conv.id);
+                            }}
+                            title="Delete"
                           >
-                            <X className="w-4 h-4 text-red-500" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
+                          <button onClick={() => handleContinueChat(conv.id)}>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                          </button>
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => handleContinueChat(conv.id)}
-                          className="text-left w-full"
-                        >
-                          <p className="font-medium text-foreground truncate">{conv.title}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {track.name} • {new Date(conv.updated_at).toLocaleDateString()}
-                          </p>
-                        </button>
                       )}
                     </div>
-                    {!isEditing && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartRename(conv);
-                          }}
-                        >
-                          <Pencil className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-                        </Button>
-                        <button onClick={() => handleContinueChat(conv.id)}>
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         )}
