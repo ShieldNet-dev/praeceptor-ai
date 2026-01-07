@@ -63,6 +63,7 @@ const Chat = () => {
 
       const convIdParam = searchParams.get('conversation');
       const trackParam = searchParams.get('track') as GuidanceTrack | null;
+      const topicParam = searchParams.get('topic');
 
       if (convIdParam) {
         // Load existing conversation
@@ -102,6 +103,11 @@ const Chat = () => {
       } else if (trackParam) {
         // New conversation with specified track
         setCurrentTrack(trackParam);
+        
+        // If a topic is specified, set it as the initial input
+        if (topicParam) {
+          setInput(`I want to learn about ${topicParam}. Please teach me this topic from the basics.`);
+        }
       } else {
         navigate('/dashboard');
       }

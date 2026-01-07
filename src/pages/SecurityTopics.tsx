@@ -65,8 +65,8 @@ const SecurityTopics = () => {
   );
 
   const handleTopicClick = (topicTitle: string) => {
-    // Navigate to chat with the selected topic
-    navigate('/dashboard', { state: { selectedTopic: topicTitle } });
+    // Navigate to chat with the topic as the initial context
+    navigate(`/chat?track=learning&topic=${encodeURIComponent(topicTitle)}`);
   };
 
   return (
@@ -154,7 +154,7 @@ const SecurityTopics = () => {
             During subsequent updates, more security topics will be available. If you would like to see 
             a new topic or course added, feel free to submit that in the review section.
           </p>
-          <Button variant="outline" onClick={() => navigate('/settings')}>
+          <Button variant="outline" onClick={() => navigate('/settings?tab=feedback')}>
             Submit Topic Request
           </Button>
         </div>
