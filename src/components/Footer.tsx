@@ -1,12 +1,47 @@
 import { Shield, Github, Twitter, Linkedin } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Footer = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const currentYear = new Date().getFullYear();
 
+  const scrollToSection = (sectionId: string) => {
+    if (location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   const links = {
-    product: ["Features", "Pricing", "Curriculum", "Enterprise"],
-    resources: ["Documentation", "Blog", "Community", "Support"],
-    company: ["About", "Careers", "Privacy", "Terms"],
+    product: [
+      { label: "Features", action: () => scrollToSection('features') },
+      { label: "Pricing", action: () => {} },
+      { label: "Curriculum", action: () => scrollToSection('curriculum') },
+      { label: "Enterprise", action: () => {} },
+    ],
+    resources: [
+      { label: "Documentation", action: () => {} },
+      { label: "Blog", action: () => {} },
+      { label: "Community", action: () => {} },
+      { label: "Support", action: () => {} },
+    ],
+    company: [
+      { label: "About", action: () => {} },
+      { label: "Careers", action: () => {} },
+      { label: "Privacy", action: () => {} },
+      { label: "Terms", action: () => navigate('/terms') },
+    ],
   };
 
   return (
@@ -15,7 +50,7 @@ const Footer = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 cursor-pointer" onClick={() => navigate('/')}>
               <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
                 <Shield className="w-6 h-6 text-primary" />
               </div>
@@ -44,13 +79,13 @@ const Footer = () => {
               <h4 className="font-semibold text-foreground mb-4 capitalize">{category}</h4>
               <ul className="space-y-3">
                 {items.map((item) => (
-                  <li key={item}>
-                    <a
-                      href="#"
-                      className="text-muted-foreground hover:text-primary transition-colors"
+                  <li key={item.label}>
+                    <button
+                      onClick={item.action}
+                      className="text-muted-foreground hover:text-primary transition-colors text-left"
                     >
-                      {item}
-                    </a>
+                      {item.label}
+                    </button>
                   </li>
                 ))}
               </ul>

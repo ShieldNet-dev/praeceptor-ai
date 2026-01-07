@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Shield, Menu, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -16,7 +17,32 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = ["Features", "Curriculum", "Pricing", "Community"];
+  const scrollToSection = (sectionId: string) => {
+    // If not on home page, navigate first
+    if (location.pathname !== '/') {
+      navigate('/');
+      // Wait for navigation, then scroll
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  const navLinks = [
+    { label: "Features", action: () => scrollToSection('features') },
+    { label: "Curriculum", action: () => scrollToSection('curriculum') },
+    { label: "Pricing", action: () => {} },
+    { label: "Community", action: () => {} },
+  ];
 
   return (
     <nav
@@ -27,7 +53,7 @@ const Navbar = () => {
       <div className="container mx-auto max-w-6xl px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
             <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
               <Shield className="w-5 h-5 text-primary" />
             </div>
@@ -37,13 +63,13 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
-                key={link}
-                href="#"
+              <button
+                key={link.label}
+                onClick={link.action}
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                {link}
-              </a>
+                {link.label}
+              </button>
             ))}
           </div>
 
@@ -71,13 +97,13 @@ const Navbar = () => {
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a
-                  key={link}
-                  href="#"
-                  className="text-muted-foreground hover:text-primary transition-colors py-2"
+                <button
+                  key={link.label}
+                  onClick={link.action}
+                  className="text-muted-foreground hover:text-primary transition-colors py-2 text-left"
                 >
-                  {link}
-                </a>
+                  {link.label}
+                </button>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
                 <Button variant="ghost" className="justify-start" onClick={() => navigate('/auth')}>

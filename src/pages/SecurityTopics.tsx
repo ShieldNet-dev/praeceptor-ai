@@ -1,23 +1,29 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
-  Cpu, 
-  Network, 
-  Shield, 
-  Code, 
-  Terminal, 
-  Brain, 
-  Cloud, 
-  Smartphone, 
-  Link, 
-  FileSearch, 
-  Globe, 
-  Lock, 
-  Bug, 
-  Siren,
+  ArrowLeft, 
+  Search,
+  Cpu,
+  Network,
+  Shield,
+  Code,
+  Terminal,
+  Brain,
+  Cloud,
+  Smartphone,
+  Link,
+  FileSearch,
+  Globe,
   Wifi,
-  Search
+  Lock,
+  Bug,
+  Siren,
+  MessageSquare
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const topics = [
+const securityTopics = [
   { icon: Cpu, title: "Computer Architecture", level: "Beginner", color: "from-blue-400 to-indigo-500" },
   { icon: Network, title: "Networking", level: "Beginner", color: "from-cyan-400 to-blue-500" },
   { icon: Shield, title: "Network Security", level: "Intermediate", color: "from-primary to-cyan-400" },
@@ -50,31 +56,62 @@ const topics = [
   { icon: Siren, title: "Incident Response", level: "Advanced", color: "from-orange-500 to-red-500" },
 ];
 
-const Topics = () => {
-  // Display only first 6 topics in landing page
-  const displayTopics = topics.slice(0, 6);
+const SecurityTopics = () => {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTopics = securityTopics.filter(topic =>
+    topic.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleTopicClick = (topicTitle: string) => {
+    // Navigate to chat with the selected topic
+    navigate('/dashboard', { state: { selectedTopic: topicTitle } });
+  };
 
   return (
-    <section id="curriculum" className="relative py-24 px-4">
-      <div className="container mx-auto max-w-6xl">
-        <div className="text-center mb-16 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
-          <span className="inline-block px-4 py-1.5 mb-4 text-sm font-mono text-primary bg-primary/10 rounded-full border border-primary/20">
-            &lt;curriculum /&gt;
-          </span>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Explore <span className="text-gradient">Security Topics</span>
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            From fundamentals to advanced techniques, our comprehensive curriculum covers every aspect of modern cybersecurity.
-          </p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 glass shadow-lg">
+        <div className="container mx-auto max-w-6xl px-4">
+          <div className="flex items-center justify-between h-16">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Dashboard
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-lg font-bold text-foreground">Security Topics</span>
+            </div>
+            <div className="w-20" />
+          </div>
+        </div>
+      </div>
+
+      <main className="container mx-auto max-w-6xl px-4 pt-24 pb-16">
+        {/* Search */}
+        <div className="mb-8">
+          <div className="relative max-w-md mx-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Search topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-secondary/50"
+            />
+          </div>
         </div>
 
+        {/* Topics Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayTopics.map((topic, index) => (
+          {filteredTopics.map((topic, index) => (
             <div
               key={topic.title}
+              onClick={() => handleTopicClick(topic.title)}
               className="group relative p-6 rounded-xl glass cyber-border cursor-pointer hover:scale-[1.02] transition-all duration-300 opacity-0 animate-fade-in-up"
-              style={{ animationDelay: `${0.2 + index * 0.1}s`, animationFillMode: 'forwards' }}
+              style={{ animationDelay: `${0.05 * index}s`, animationFillMode: 'forwards' }}
             >
               {/* Gradient background on hover */}
               <div className={`absolute inset-0 rounded-xl bg-gradient-to-br ${topic.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
@@ -90,7 +127,7 @@ const Topics = () => {
                 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
                   <span className="text-sm text-muted-foreground">
-                    Learn with AI
+                    Click to learn with AI
                   </span>
                   <span className={`text-xs px-3 py-1 rounded-full ${
                     topic.level === "Beginner" 
@@ -110,17 +147,20 @@ const Topics = () => {
         </div>
 
         {/* Note about more topics */}
-        <div className="mt-12 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}>
-          <p className="text-muted-foreground mb-2">
-            <span className="text-primary font-semibold">30+ security topics</span> available including Blockchain, IoT, VoIP, Malware Analysis, and more!
+        <div className="mt-12 p-6 glass rounded-xl cyber-border text-center">
+          <MessageSquare className="w-8 h-8 text-primary mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">More Topics Coming Soon!</h3>
+          <p className="text-muted-foreground mb-4">
+            During subsequent updates, more security topics will be available. If you would like to see 
+            a new topic or course added, feel free to submit that in the review section.
           </p>
-          <p className="text-sm text-muted-foreground">
-            More topics coming soon. Want a new topic? Submit your request in the review section after signing up.
-          </p>
+          <Button variant="outline" onClick={() => navigate('/settings')}>
+            Submit Topic Request
+          </Button>
         </div>
-      </div>
-    </section>
+      </main>
+    </div>
   );
 };
 
-export default Topics;
+export default SecurityTopics;
