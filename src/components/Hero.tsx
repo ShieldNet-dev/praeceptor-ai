@@ -4,6 +4,13 @@ import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
   const navigate = useNavigate();
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
   
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 pt-20 pb-12 overflow-hidden">
@@ -40,7 +47,7 @@ const Hero = () => {
               Start Learning Free
               <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button variant="heroOutline" size="xl" onClick={() => navigate('/auth')}>
+            <Button variant="heroOutline" size="xl" onClick={() => scrollToSection('curriculum')}>
               <Shield className="w-5 h-5" />
               View Curriculum
             </Button>
@@ -81,8 +88,8 @@ const Hero = () => {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16 pt-16 border-t border-border/50 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.6s', animationFillMode: 'forwards' }}>
             {[
-              { value: "50K+", label: "Students Trained" },
-              { value: "200+", label: "Security Topics" },
+              { value: "All", label: "Target Audience" },
+              { value: "30+", label: "Security Topics" },
               { value: "98%", label: "Success Rate" },
               { value: "24/7", label: "AI Availability" },
             ].map((stat) => (

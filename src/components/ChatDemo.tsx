@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Bot, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const sampleConversation = [
   {
@@ -18,6 +19,7 @@ const sampleConversation = [
 ];
 
 const ChatDemo = () => {
+  const navigate = useNavigate();
   const [messages] = useState(sampleConversation);
   const [inputValue, setInputValue] = useState("");
 
@@ -55,7 +57,7 @@ const ChatDemo = () => {
                 </li>
               ))}
             </ul>
-            <Button variant="hero" size="lg">
+            <Button variant="hero" size="lg" onClick={() => navigate('/auth')}>
               Try It Free
             </Button>
           </div>
