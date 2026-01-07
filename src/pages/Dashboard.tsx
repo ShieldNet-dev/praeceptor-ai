@@ -339,6 +339,36 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Security Topics Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Security Topics</h2>
+            <Button variant="outline" size="sm" onClick={() => navigate('/security-topics')}>
+              View All Topics
+            </Button>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "Networking", color: "from-cyan-400 to-blue-500" },
+              { title: "Ethical Hacking", color: "from-red-400 to-pink-500" },
+              { title: "Python for Ethical Hacking", color: "from-yellow-500 to-red-500" },
+              { title: "Cloud Computing Security", color: "from-sky-500 to-indigo-500" },
+            ].map((topic) => (
+              <button
+                key={topic.title}
+                onClick={() => navigate(`/chat?track=learning&topic=${encodeURIComponent(topic.title)}`)}
+                className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              >
+                <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${topic.color} text-white mb-3`}>
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <h3 className="font-medium text-foreground text-sm">{topic.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">Click to start learning</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Recent conversations */}
         {conversations.length > 0 && (
           <div>
