@@ -1,5 +1,6 @@
-import { Shield, Github, Twitter, Linkedin } from "lucide-react";
+import { Github, Twitter, Linkedin } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import praeceptorLogo from '@/assets/praeceptor-logo.png';
 
 const Footer = () => {
   const navigate = useNavigate();
@@ -51,9 +52,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Shield className="w-6 h-6 text-primary" />
-              </div>
+              <img src={praeceptorLogo} alt="Praeceptor AI" className="w-10 h-10 rounded-lg" />
               <span className="text-xl font-bold text-foreground">Praeceptor AI</span>
             </div>
             <p className="text-muted-foreground mb-6 max-w-sm">
