@@ -3,12 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Shield, 
   Send, 
   ArrowLeft, 
   Paperclip,
   Loader2,
-  Bot,
   User,
   X,
   FileText,
@@ -20,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { GuidanceTrack, getTrackById } from '@/types/tracks';
 import { toast } from 'sonner';
 import VoiceInput from '@/components/VoiceInput';
+import ReactMarkdown from 'react-markdown';
+import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 
 interface Message {
   id: string;
@@ -302,7 +302,7 @@ const Chat = () => {
   };
 
   const track = getTrackById(currentTrack);
-  const TrackIcon = track?.icon || Shield;
+  const TrackIcon = track?.icon;
 
   if (authLoading || loading) {
     return (
@@ -325,9 +325,7 @@ const Chat = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
-            <div className={`p-2 rounded-lg bg-gradient-to-br ${track?.color || 'from-primary to-cyan-400'} text-white`}>
-              <TrackIcon className="w-5 h-5" />
-            </div>
+            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
             <div>
               <h1 className="font-semibold text-foreground">{track?.name || 'Chat'}</h1>
               <p className="text-xs text-muted-foreground">Praeceptor AI</p>
@@ -348,9 +346,7 @@ const Chat = () => {
         <div className="container mx-auto max-w-4xl px-4 py-6">
           {messages.length === 0 ? (
             <div className="text-center py-12">
-              <div className="inline-flex p-4 rounded-2xl bg-primary/10 mb-4">
-                <Bot className="w-8 h-8 text-primary" />
-              </div>
+              <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-16 h-16 mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">
                 Welcome to {track?.name}
               </h2>
@@ -366,34 +362,36 @@ const Chat = () => {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
                 >
-                  <div
-                    className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
-                      message.role === 'user'
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-accent/20 text-accent'
-                    }`}
-                  >
+                  <div className="flex-shrink-0">
                     {message.role === 'user' ? (
-                      <User className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
+                      </div>
                     ) : (
-                      <Bot className="w-4 h-4" />
+                      <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-8 h-8" />
                     )}
                   </div>
                   <div
-                    className={`flex-1 max-w-[80%] ${
+                    className={`flex-1 max-w-[85%] ${
                       message.role === 'user' ? 'text-right' : ''
                     }`}
                   >
                     <div
-                      className={`inline-block p-4 rounded-2xl ${
+                      className={`inline-block rounded-2xl ${
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'glass'
+                          ? 'bg-primary text-primary-foreground p-4'
+                          : 'glass p-4'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap text-left">{message.content}</p>
+                      {message.role === 'user' ? (
+                        <p className="whitespace-pre-wrap text-left text-sm">{message.content}</p>
+                      ) : (
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-left prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-code:bg-secondary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-secondary prose-pre:p-3 prose-pre:rounded-lg prose-blockquote:border-l-primary prose-blockquote:pl-4 prose-blockquote:italic">
+                          <ReactMarkdown>{message.content}</ReactMarkdown>
+                        </div>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {new Date(message.created_at).toLocaleTimeString()}
@@ -402,10 +400,8 @@ const Chat = () => {
                 </div>
               ))}
               {sending && (
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-accent/20 text-accent">
-                    <Bot className="w-4 h-4" />
-                  </div>
+                <div className="flex gap-3">
+                  <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-8 h-8 flex-shrink-0" />
                   <div className="glass rounded-2xl p-4">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
                   </div>
