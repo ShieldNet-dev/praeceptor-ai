@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, ArrowLeft, Loader2, Eye, EyeOff, Check, X, Fingerprint } from 'lucide-react';
+import { ArrowLeft, Loader2, Eye, EyeOff, Check, X, Fingerprint } from 'lucide-react';
+import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -288,9 +289,7 @@ const Auth = () => {
 
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Shield className="w-7 h-7 text-primary" />
-          </div>
+          <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-14 h-14" />
           <div>
             <h1 className="text-2xl font-bold text-foreground">Praeceptor AI</h1>
             <p className="text-sm text-muted-foreground">Your Cybersecurity Mentor</p>

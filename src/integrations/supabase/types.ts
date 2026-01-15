@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       app_reviews: {
         Row: {
+          admin_feedback: string | null
+          admin_feedback_at: string | null
           created_at: string
           id: string
           rating: number
@@ -24,6 +26,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_feedback?: string | null
+          admin_feedback_at?: string | null
           created_at?: string
           id?: string
           rating: number
@@ -32,6 +36,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_feedback?: string | null
+          admin_feedback_at?: string | null
           created_at?: string
           id?: string
           rating?: number

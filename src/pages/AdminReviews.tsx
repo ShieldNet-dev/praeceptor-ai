@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -10,19 +11,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Shield,
   ArrowLeft,
   Loader2,
   Star,
   AlertTriangle,
   MessageSquare,
-  Users,
-  TrendingUp
+  TrendingUp,
+  Send,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 
 interface Review {
   id: string;
@@ -32,6 +34,8 @@ interface Review {
   created_at: string;
   updated_at: string;
   user_email?: string;
+  admin_feedback?: string | null;
+  admin_feedback_at?: string | null;
 }
 
 const AdminReviews = () => {
@@ -39,8 +43,56 @@ const AdminReviews = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState({ total: 0, avgRating: 0, ratingCounts: [0, 0, 0, 0, 0] });
+  const [feedbackText, setFeedbackText] = useState<{ [key: string]: string }>({});
+  const [editingFeedback, setEditingFeedback] = useState<string | null>(null);
+  const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  const handleSubmitFeedback = async (reviewId: string) => {
+    const feedback = feedbackText[reviewId]?.trim();
+    if (!feedback) {
+      toast.error('Please enter feedback before submitting');
+      return;
+    }
+
+    setSubmittingFeedback(reviewId);
+    try {
+      const { error } = await supabase
+        .from('app_reviews')
+        .update({
+          admin_feedback: feedback,
+          admin_feedback_at: new Date().toISOString()
+        })
+        .eq('id', reviewId);
+
+      if (error) throw error;
+
+      // Update local state
+      setReviews(prev => prev.map(r => 
+        r.id === reviewId 
+          ? { ...r, admin_feedback: feedback, admin_feedback_at: new Date().toISOString() }
+          : r
+      ));
+      setEditingFeedback(null);
+      setFeedbackText(prev => ({ ...prev, [reviewId]: '' }));
+      toast.success('Feedback submitted successfully');
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast.error('Failed to submit feedback');
+    } finally {
+      setSubmittingFeedback(null);
+    }
+  };
+
+  const handleStartEditing = (reviewId: string, existingFeedback?: string | null) => {
+    setEditingFeedback(reviewId);
+    setFeedbackText(prev => ({ ...prev, [reviewId]: existingFeedback || '' }));
+  };
+
+  const handleCancelEditing = () => {
+    setEditingFeedback(null);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -163,9 +215,7 @@ const AdminReviews = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-3 flex-1">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <Shield className="w-5 h-5 text-primary" />
-            </div>
+            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
             <div>
               <h1 className="font-semibold text-foreground">Admin Dashboard</h1>
               <p className="text-xs text-muted-foreground">App Reviews & Feedback</p>
@@ -246,7 +296,8 @@ const AdminReviews = () => {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Rating</TableHead>
-                    <TableHead className="min-w-[300px]">Review</TableHead>
+                    <TableHead className="min-w-[250px]">Review</TableHead>
+                    <TableHead className="min-w-[300px]">Admin Feedback</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -270,8 +321,69 @@ const AdminReviews = () => {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-md">
+                      <TableCell className="max-w-[250px]">
                         <p className="line-clamp-3">{review.review_text}</p>
+                      </TableCell>
+                      <TableCell className="max-w-[300px]">
+                        {editingFeedback === review.id ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={feedbackText[review.id] || ''}
+                              onChange={(e) => setFeedbackText(prev => ({ ...prev, [review.id]: e.target.value }))}
+                              placeholder="Write your feedback to the user..."
+                              className="min-h-[80px] text-sm"
+                              disabled={submittingFeedback === review.id}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleSubmitFeedback(review.id)}
+                                disabled={submittingFeedback === review.id}
+                              >
+                                {submittingFeedback === review.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4" />
+                                )}
+                                <span className="ml-1">Send</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelEditing}
+                                disabled={submittingFeedback === review.id}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : review.admin_feedback ? (
+                          <div className="space-y-1">
+                            <p className="text-sm line-clamp-3">{review.admin_feedback}</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                {review.admin_feedback_at && format(new Date(review.admin_feedback_at), 'MMM d, yyyy')}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs"
+                                onClick={() => handleStartEditing(review.id, review.admin_feedback)}
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStartEditing(review.id)}
+                          >
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            Add Feedback
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(review.created_at), 'MMM d, yyyy')}
