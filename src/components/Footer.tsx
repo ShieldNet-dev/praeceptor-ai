@@ -1,6 +1,6 @@
 import { Github, Twitter, Linkedin } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import praeceptorLogo from '@/assets/praeceptor-logo.png';
+import praeceptorLogoFull from '@/assets/praeceptor-logo-full.png';
 
 const Footer = () => {
   const navigate = useNavigate();
@@ -52,8 +52,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4 cursor-pointer" onClick={() => navigate('/')}>
-              <img src={praeceptorLogo} alt="Praeceptor AI" className="w-10 h-10 rounded-lg" />
-              <span className="text-xl font-bold text-foreground">Praeceptor AI</span>
+              <img src={praeceptorLogoFull} alt="Praeceptor AI" className="h-16 w-auto" />
             </div>
             <p className="text-muted-foreground mb-6 max-w-sm">
               Your intelligent cybersecurity tutor. Learn security concepts, practice skills, 
