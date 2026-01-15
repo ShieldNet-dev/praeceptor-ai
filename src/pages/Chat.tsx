@@ -251,31 +251,121 @@ const Chat = () => {
         prev.map((m) => (m.id === tempUserMsg.id ? (savedUserMsg as Message) : m))
       );
 
-      // Get AI response
-      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('praeceptor-chat', {
-        body: {
-          message: messageContent,
-          track: currentTrack,
-          conversationId: convId
-        }
+      // Add placeholder assistant message for streaming
+      const tempAssistantId = `assistant-${Date.now()}`;
+      setMessages((prev) => [...prev, {
+        id: tempAssistantId,
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString()
+      }]);
+
+      // Stream AI response
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/praeceptor-chat`;
+      
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ 
+          message: messageContent, 
+          track: currentTrack, 
+          conversationId: convId,
+          stream: true 
+        }),
       });
 
-      if (aiError) throw aiError;
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        throw new Error(errorData.error || 'Failed to get AI response');
+      }
 
-      // Save AI message
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let fullResponse = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        textBuffer += decoder.decode(value, { stream: true });
+
+        // Process line-by-line as data arrives
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              fullResponse += content;
+              // Update the assistant message with streaming content
+              setMessages((prev) => 
+                prev.map((m) => 
+                  m.id === tempAssistantId 
+                    ? { ...m, content: fullResponse }
+                    : m
+                )
+              );
+            }
+          } catch {
+            // Incomplete JSON, put it back and wait for more data
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush for any remaining buffered lines
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              fullResponse += content;
+            }
+          } catch { /* ignore partial leftovers */ }
+        }
+      }
+
+      // Save AI message to database
       const { data: savedAiMsg, error: aiMsgError } = await supabase
         .from('messages')
         .insert({
           conversation_id: convId,
           role: 'assistant',
-          content: aiResponse.response
+          content: fullResponse
         })
         .select()
         .single();
 
       if (aiMsgError) throw aiMsgError;
 
-      setMessages((prev) => [...prev, savedAiMsg as Message]);
+      // Update temp message with saved message
+      setMessages((prev) => 
+        prev.map((m) => (m.id === tempAssistantId ? (savedAiMsg as Message) : m))
+      );
 
       // Update progress
       await supabase
@@ -387,26 +477,29 @@ const Chat = () => {
                     >
                       {message.role === 'user' ? (
                         <p className="whitespace-pre-wrap text-left text-sm">{message.content}</p>
-                      ) : (
+                      ) : message.content ? (
                         <div className="prose prose-sm dark:prose-invert max-w-none text-left prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-code:bg-secondary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-secondary prose-pre:p-3 prose-pre:rounded-lg prose-blockquote:border-l-primary prose-blockquote:pl-4 prose-blockquote:italic">
                           <ReactMarkdown>{message.content}</ReactMarkdown>
                         </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                          <span className="text-sm text-muted-foreground">Thinking...</span>
+                        </div>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </p>
+                    {message.content && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
-              {sending && (
-                <div className="flex gap-3">
-                  <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-8 h-8 flex-shrink-0" />
-                  <div className="glass rounded-2xl p-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  </div>
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </div>
           )}
