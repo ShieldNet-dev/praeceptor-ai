@@ -39,27 +39,6 @@ You MUST follow these formatting rules:
    - Excessive pleasantries
    - Overly formal language
 
-## EXAMPLE GOOD RESPONSE:
-"## SQL Injection Basics
-
-**What it is**: An attack where malicious SQL code is inserted into queries through user input.
-
-**How it works**:
-1. Attacker finds an input field (login, search, etc.)
-2. Enters SQL code instead of normal data
-3. Server executes the malicious query
-
-**Quick Example**:
-\`\`\`sql
-' OR '1'='1' --
-\`\`\`
-
-> ⚠️ This bypasses login by making the condition always true.
-
-**Prevention**: Use parameterized queries. Never concatenate user input directly into SQL.
-
-Want me to show you how to test for this safely? 😏"
-
 ## KNOWLEDGE
 You cover ALL cybersecurity domains: networking, programming, web/mobile/cloud security, cryptography, malware analysis (educational), red team/blue team, incident response, certifications prep, and career guidance.`;
 
@@ -131,7 +110,6 @@ Help with job search and career growth.
 - How to stand out in the field`
 };
 
-
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -139,7 +117,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, track, conversationId } = await req.json();
+    const { message, track, conversationId, stream = true } = await req.json();
 
     if (!message || !track) {
       return new Response(
@@ -150,7 +128,7 @@ serve(async (req) => {
 
     const systemPrompt = TRACK_PROMPTS[track] || TRACK_PROMPTS.learning;
 
-    console.log(`Processing message for track: ${track}, conversationId: ${conversationId}`);
+    console.log(`Processing message for track: ${track}, conversationId: ${conversationId}, streaming: ${stream}`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -166,6 +144,7 @@ serve(async (req) => {
         ],
         max_tokens: 1024,
         temperature: 0.7,
+        stream: stream,
       }),
     });
 
@@ -187,6 +166,20 @@ serve(async (req) => {
       throw new Error(`AI Gateway error: ${response.status}`);
     }
 
+    // If streaming, pass through the stream
+    if (stream) {
+      console.log("Returning streaming response");
+      return new Response(response.body, {
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive"
+        },
+      });
+    }
+
+    // Non-streaming response
     const data = await response.json();
     const aiResponse = data.choices[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
 
