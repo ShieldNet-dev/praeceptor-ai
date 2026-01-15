@@ -19,7 +19,7 @@ import {
   BookOpen,
   Shield
 } from 'lucide-react';
-import praeceptorLogo from '@/assets/praeceptor-logo.png';
+import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { TRACKS, GuidanceTrack, getTrackById } from '@/types/tracks';
@@ -218,7 +218,7 @@ const Dashboard = () => {
       <header className="sticky top-0 z-50 glass border-b border-border/50">
         <div className="container mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={praeceptorLogo} alt="Praeceptor AI" className="w-9 h-9 rounded-lg" />
+            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
             <span className="text-lg font-bold text-foreground">Praeceptor AI</span>
           </div>
           <div className="flex items-center gap-2">

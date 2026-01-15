@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import praeceptorLogo from '@/assets/praeceptor-logo.png';
+import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -55,7 +55,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-            <img src={praeceptorLogo} alt="Praeceptor AI" className="w-9 h-9 rounded-lg" />
+            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
             <span className="text-lg font-bold text-foreground">Praeceptor AI</span>
           </div>
 
