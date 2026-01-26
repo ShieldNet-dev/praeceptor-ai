@@ -32,13 +32,13 @@ const Footer = () => {
       { label: "Enterprise", action: () => {} },
     ],
     resources: [
-      { label: "Documentation", action: () => {} },
-      { label: "Blog", action: () => {} },
+      { label: "Documentation", action: () => navigate('/docs') },
+      { label: "Blog", action: () => navigate('/blog') },
       { label: "Community", action: () => {} },
-      { label: "Support", action: () => {} },
+      { label: "Support", action: () => navigate('/support') },
     ],
     company: [
-      { label: "About", action: () => {} },
+      { label: "About", action: () => navigate('/about') },
       { label: "Careers", action: () => {} },
       { label: "Privacy", action: () => {} },
       { label: "Terms", action: () => navigate('/terms') },

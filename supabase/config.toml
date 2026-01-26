@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.voice-to-text]
 verify_jwt = false
+
+[functions.praeceptor-api]
+verify_jwt = false
+
+[functions.fetch-cybersecurity-news]
+verify_jwt = false

@@ -17,7 +17,9 @@ import {
   Trash2,
   Search,
   BookOpen,
-  Shield
+  Shield,
+  Newspaper,
+  HelpCircle
 } from 'lucide-react';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { useAuth } from '@/hooks/useAuth';
@@ -339,33 +341,50 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Security Topics Section */}
+        {/* Quick Access Section */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Security Topics</h2>
-            <Button variant="outline" size="sm" onClick={() => navigate('/security-topics')}>
-              View All Topics
-            </Button>
-          </div>
+          <h2 className="text-xl font-semibold mb-4">Quick Access</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { title: "Networking", color: "from-cyan-400 to-blue-500" },
-              { title: "Ethical Hacking", color: "from-red-400 to-pink-500" },
-              { title: "Python for Ethical Hacking", color: "from-yellow-500 to-red-500" },
-              { title: "Cloud Computing Security", color: "from-sky-500 to-indigo-500" },
-            ].map((topic) => (
-              <button
-                key={topic.title}
-                onClick={() => navigate(`/chat?track=learning&topic=${encodeURIComponent(topic.title)}`)}
-                className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
-              >
-                <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${topic.color} text-white mb-3`}>
-                  <BookOpen className="w-4 h-4" />
-                </div>
-                <h3 className="font-medium text-foreground text-sm">{topic.title}</h3>
-                <p className="text-xs text-muted-foreground mt-1">Click to start learning</p>
-              </button>
-            ))}
+            <button
+              onClick={() => navigate('/blog')}
+              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+            >
+              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-500 text-white mb-3">
+                <Newspaper className="w-4 h-4" />
+              </div>
+              <h3 className="font-medium text-foreground text-sm">Security News</h3>
+              <p className="text-xs text-muted-foreground mt-1">Latest cybersecurity updates</p>
+            </button>
+            <button
+              onClick={() => navigate('/support')}
+              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+            >
+              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-violet-400 to-purple-500 text-white mb-3">
+                <HelpCircle className="w-4 h-4" />
+              </div>
+              <h3 className="font-medium text-foreground text-sm">Support</h3>
+              <p className="text-xs text-muted-foreground mt-1">FAQ & contact us</p>
+            </button>
+            <button
+              onClick={() => navigate('/docs')}
+              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+            >
+              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 text-white mb-3">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <h3 className="font-medium text-foreground text-sm">Documentation</h3>
+              <p className="text-xs text-muted-foreground mt-1">Learn how to use the app</p>
+            </button>
+            <button
+              onClick={() => navigate('/security-topics')}
+              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+            >
+              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-white mb-3">
+                <Shield className="w-4 h-4" />
+              </div>
+              <h3 className="font-medium text-foreground text-sm">Security Topics</h3>
+              <p className="text-xs text-muted-foreground mt-1">Browse all topics</p>
+            </button>
           </div>
         </div>
 
