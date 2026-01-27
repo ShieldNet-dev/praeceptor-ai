@@ -15,6 +15,7 @@ import AdminSupport from "./pages/AdminSupport";
 import Terms from "./pages/Terms";
 import SecurityTopics from "./pages/SecurityTopics";
 import Blog from "./pages/Blog";
+import Career from "./pages/Career";
 import Support from "./pages/Support";
 import About from "./pages/About";
 import Documentation from "./pages/Documentation";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/security-topics" element={<SecurityTopics />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/career" element={<Career />} />
             <Route path="/support" element={<Support />} />
             <Route path="/about" element={<About />} />
             <Route path="/docs" element={<Documentation />} />

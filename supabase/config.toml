@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.fetch-cybersecurity-news]
 verify_jwt = false
+
+[functions.fetch-career-listings]
+verify_jwt = false
