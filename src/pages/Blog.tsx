@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowLeft, 
   ExternalLink, 
@@ -12,7 +13,10 @@ import {
   Search, 
   Newspaper,
   Clock,
-  Loader2
+  Loader2,
+  Briefcase,
+  ArrowRight,
+  Filter
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -33,6 +37,8 @@ const Blog = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('newest');
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   const fetchNews = async (showRefreshToast = false) => {
@@ -64,11 +70,48 @@ const Blog = () => {
     fetchNews();
   }, []);
 
-  const filteredNews = news.filter(item => 
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.source.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const sources = useMemo(() => {
+    const uniqueSources = [...new Set(news.map(item => item.source))];
+    return uniqueSources;
+  }, [news]);
+
+  const filteredAndSortedNews = useMemo(() => {
+    let result = [...news];
+
+    // Filter by source
+    if (sourceFilter !== 'all') {
+      result = result.filter(item => item.source === sourceFilter);
+    }
+
+    // Filter by search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(item => 
+        item.title.toLowerCase().includes(query) ||
+        item.source.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'newest':
+        result.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
+        break;
+      case 'oldest':
+        result.sort((a, b) => new Date(a.pubDate).getTime() - new Date(b.pubDate).getTime());
+        break;
+      case 'source':
+        result.sort((a, b) => a.source.localeCompare(b.source));
+        break;
+      case 'title':
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
+
+    return result;
+  }, [news, sourceFilter, searchQuery, sortBy]);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -128,9 +171,32 @@ const Blog = () => {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="max-w-md mx-auto mb-8">
-          <div className="relative">
+        {/* Career Promo Banner */}
+        <Card className="glass cyber-border mb-8 bg-gradient-to-r from-primary/10 to-accent/10">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-primary/20">
+                  <Briefcase className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Looking for Cybersecurity Jobs?</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Explore jobs, internships, scholarships, and SIWES opportunities
+                  </p>
+                </div>
+              </div>
+              <Button onClick={() => navigate('/career')} className="gap-2">
+                View Career Hub
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Filters */}
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search news..."
@@ -139,11 +205,41 @@ const Blog = () => {
               className="pl-10"
             />
           </div>
+          <div className="flex gap-2">
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-44">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {sources.map(source => (
+                  <SelectItem key={source} value={source}>{source}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
+                <SelectItem value="source">By Source</SelectItem>
+                <SelectItem value="title">By Title</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        {/* Results count */}
+        <p className="text-sm text-muted-foreground mb-4">
+          Showing {filteredAndSortedNews.length} of {news.length} articles
+        </p>
 
         {/* Last Updated */}
         {fetchedAt && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-6">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
             <Clock className="w-4 h-4" />
             Last updated: {new Date(fetchedAt).toLocaleString()}
           </div>
@@ -167,7 +263,7 @@ const Blog = () => {
               </Card>
             ))}
           </div>
-        ) : filteredNews.length === 0 ? (
+        ) : filteredAndSortedNews.length === 0 ? (
           <div className="text-center py-12">
             <Newspaper className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No news found</h3>
@@ -177,7 +273,7 @@ const Blog = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNews.map((item, index) => (
+            {filteredAndSortedNews.map((item, index) => (
               <Card 
                 key={`${item.link}-${index}`} 
                 className="glass cyber-border hover:border-primary/50 transition-all duration-300 group"

@@ -34,7 +34,7 @@ const Footer = () => {
     resources: [
       { label: "Documentation", action: () => navigate('/docs') },
       { label: "Blog", action: () => navigate('/blog') },
-      { label: "Community", action: () => {} },
+      { label: "Career Hub", action: () => navigate('/career') },
       { label: "Support", action: () => navigate('/support') },
     ],
     company: [
