@@ -21,9 +21,18 @@ const PRAECEPTOR_SYSTEM_PROMPT = `You are Praeceptor AI — a reformed black-hat
 ## KNOWLEDGE
 You cover ALL cybersecurity domains: networking, programming, web/mobile/cloud security, cryptography, malware analysis (educational), red team/blue team, incident response, certifications prep, and career guidance.`;
 
-// Verify Telegram webhook signature
-function verifyTelegramSignature(secretToken: string | null, expectedToken: string): boolean {
-  if (!secretToken || !expectedToken) return false;
+// Verify Telegram webhook signature (returns true if no secret configured - allows testing)
+function verifyTelegramSignature(secretToken: string | null, expectedToken: string | undefined): boolean {
+  // If no expected token is configured, skip verification (for testing/development)
+  if (!expectedToken) {
+    console.log("No TELEGRAM_WEBHOOK_SECRET configured, skipping signature verification");
+    return true;
+  }
+  // If expected token is configured but no token provided in request, reject
+  if (!secretToken) {
+    console.log("TELEGRAM_WEBHOOK_SECRET is configured but no token in request header");
+    return false;
+  }
   return secretToken === expectedToken;
 }
 
@@ -92,11 +101,14 @@ serve(async (req) => {
 
     // Telegram webhook verification
     if (platform === "telegram") {
+      console.log("Received Telegram webhook request");
       const telegramSecret = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
       const providedToken = req.headers.get("x-telegram-bot-api-secret-token");
       
-      if (telegramSecret && !verifyTelegramSignature(providedToken, telegramSecret)) {
-        console.error("Invalid Telegram signature");
+      console.log(`Telegram secret configured: ${!!telegramSecret}, Token provided: ${!!providedToken}`);
+      
+      if (!verifyTelegramSignature(providedToken, telegramSecret)) {
+        console.error("Invalid Telegram signature - token mismatch");
         return new Response(JSON.stringify({ error: "Invalid signature" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -107,27 +119,41 @@ serve(async (req) => {
       const message = payload.message?.text;
       const chatId = payload.message?.chat?.id;
 
+      console.log(`Telegram payload - chatId: ${chatId}, message: ${message ? message.substring(0, 50) : 'none'}`);
+
       if (!message || !chatId) {
+        console.log("No message or chatId, returning ok");
         return new Response(JSON.stringify({ ok: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
 
-      console.log(`Telegram message from ${chatId}: ${message}`);
-      const aiResponse = await getAIResponse(message);
+      console.log(`Processing Telegram message from ${chatId}: ${message.substring(0, 50)}...`);
+      
+      try {
+        const aiResponse = await getAIResponse(message);
+        console.log(`AI response generated, length: ${aiResponse.length}`);
 
-      // Send response back to Telegram
-      const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-      if (telegramToken) {
-        await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: aiResponse,
-            parse_mode: "Markdown"
-          })
-        });
+        // Send response back to Telegram
+        const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (telegramToken) {
+          console.log("Sending response to Telegram...");
+          const telegramResponse = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: aiResponse,
+              parse_mode: "Markdown"
+            })
+          });
+          const telegramResult = await telegramResponse.json();
+          console.log(`Telegram API response: ${JSON.stringify(telegramResult)}`);
+        } else {
+          console.error("TELEGRAM_BOT_TOKEN not configured!");
+        }
+      } catch (err) {
+        console.error("Error processing Telegram message:", err);
       }
 
       return new Response(JSON.stringify({ ok: true }), {
@@ -137,21 +163,30 @@ serve(async (req) => {
 
     // Instagram/Meta webhook verification
     if (platform === "instagram") {
+      console.log("Received Instagram webhook request");
+      
       // Handle verification challenge
       if (req.method === "GET") {
         const verifyToken = url.searchParams.get("hub.verify_token");
         const challenge = url.searchParams.get("hub.challenge");
         const expectedToken = Deno.env.get("META_VERIFY_TOKEN");
 
+        console.log(`Instagram verification - verifyToken: ${verifyToken}, expectedToken configured: ${!!expectedToken}`);
+        
         if (verifyToken === expectedToken) {
+          console.log("Instagram webhook verification successful");
           return new Response(challenge, { headers: corsHeaders });
         }
+        console.error("Instagram webhook verification failed - token mismatch");
         return new Response("Forbidden", { status: 403, headers: corsHeaders });
       }
 
       const metaSecret = Deno.env.get("META_APP_SECRET");
       const signature = req.headers.get("x-hub-signature-256");
       
+      console.log(`Meta secret configured: ${!!metaSecret}, Signature provided: ${!!signature}`);
+      
+      // Skip signature verification if no secret configured (for testing)
       if (metaSecret && !(await verifyMetaSignature(body, signature, metaSecret))) {
         console.error("Invalid Meta signature");
         return new Response(JSON.stringify({ error: "Invalid signature" }), {
@@ -162,6 +197,8 @@ serve(async (req) => {
 
       // Handle Instagram messages
       const entries = payload.entry || [];
+      console.log(`Processing ${entries.length} Instagram entries`);
+      
       for (const entry of entries) {
         const messaging = entry.messaging || [];
         for (const event of messaging) {
@@ -169,21 +206,32 @@ serve(async (req) => {
             const senderId = event.sender?.id;
             const message = event.message.text;
             
-            console.log(`Instagram message from ${senderId}: ${message}`);
-            const aiResponse = await getAIResponse(message);
+            console.log(`Instagram message from ${senderId}: ${message.substring(0, 50)}...`);
+            
+            try {
+              const aiResponse = await getAIResponse(message);
+              console.log(`AI response generated, length: ${aiResponse.length}`);
 
-            // Send response back via Instagram
-            const pageAccessToken = Deno.env.get("INSTAGRAM_PAGE_ACCESS_TOKEN");
-            if (pageAccessToken) {
-              await fetch(`https://graph.facebook.com/v18.0/me/messages`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  recipient: { id: senderId },
-                  message: { text: aiResponse },
-                  access_token: pageAccessToken
-                })
-              });
+              // Send response back via Instagram
+              const pageAccessToken = Deno.env.get("INSTAGRAM_PAGE_ACCESS_TOKEN");
+              if (pageAccessToken) {
+                console.log("Sending response to Instagram...");
+                const igResponse = await fetch(`https://graph.facebook.com/v18.0/me/messages`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    recipient: { id: senderId },
+                    message: { text: aiResponse },
+                    access_token: pageAccessToken
+                  })
+                });
+                const igResult = await igResponse.json();
+                console.log(`Instagram API response: ${JSON.stringify(igResult)}`);
+              } else {
+                console.error("INSTAGRAM_PAGE_ACCESS_TOKEN not configured!");
+              }
+            } catch (err) {
+              console.error("Error processing Instagram message:", err);
             }
           }
         }
