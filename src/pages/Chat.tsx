@@ -11,7 +11,9 @@ import {
   X,
   FileText,
   Image as ImageIcon,
-  Settings
+  Settings,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,8 @@ import { GuidanceTrack, getTrackById } from '@/types/tracks';
 import { toast } from 'sonner';
 import VoiceInput from '@/components/VoiceInput';
 import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 
 interface Message {
@@ -35,6 +39,149 @@ interface UploadedFile {
   url?: string;
   storagePath?: string;
 }
+
+// Code block component with copy functionality
+const CodeBlock = ({ language, children }: { language: string; children: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group my-4 rounded-xl overflow-hidden bg-[#1e1e1e] border border-border/30">
+      {/* Header with language label and copy button */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-border/20">
+        <span className="text-xs font-mono text-muted-foreground">{language || 'code'}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-success" />
+              <span>Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy code</span>
+            </>
+          )}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={language || 'text'}
+        style={oneDark}
+        customStyle={{
+          margin: 0,
+          padding: '1rem',
+          background: 'transparent',
+          fontSize: '0.875rem',
+          lineHeight: '1.5',
+        }}
+        showLineNumbers={children.split('\n').length > 3}
+        lineNumberStyle={{ opacity: 0.4, paddingRight: '1rem', minWidth: '2.5rem' }}
+      >
+        {children}
+      </SyntaxHighlighter>
+    </div>
+  );
+};
+
+// Inline code component
+const InlineCode = ({ children }: { children: React.ReactNode }) => (
+  <code className="px-1.5 py-0.5 mx-0.5 rounded bg-secondary/80 text-primary font-mono text-[0.9em]">
+    {children}
+  </code>
+);
+
+// ChatGPT-style message component
+const ChatMessage = ({ message }: { message: Message }) => {
+  const isUser = message.role === 'user';
+
+  return (
+    <div className={`py-6 ${isUser ? 'bg-transparent' : 'bg-secondary/20'}`}>
+      <div className="container mx-auto max-w-3xl px-4">
+        <div className="flex gap-4">
+          {/* Avatar */}
+          <div className="flex-shrink-0 mt-1">
+            {isUser ? (
+              <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                <User className="w-4 h-4 text-accent" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-6 h-6" />
+              </div>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {/* Name */}
+            <div className="font-semibold text-foreground mb-1 text-sm">
+              {isUser ? 'You' : 'Praeceptor AI'}
+            </div>
+
+            {/* Message content */}
+            {isUser ? (
+              <p className="text-foreground whitespace-pre-wrap leading-relaxed">{message.content}</p>
+            ) : message.content ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed
+                prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-6 prose-headings:mb-3
+                prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+                prose-p:my-3 prose-p:leading-relaxed
+                prose-ul:my-3 prose-ul:pl-6 prose-ol:my-3 prose-ol:pl-6
+                prose-li:my-1 prose-li:leading-relaxed
+                prose-strong:text-foreground prose-strong:font-semibold
+                prose-blockquote:border-l-primary prose-blockquote:border-l-2 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-muted-foreground prose-blockquote:my-4
+                prose-a:text-primary prose-a:underline hover:prose-a:text-primary/80
+                prose-hr:my-6 prose-hr:border-border
+              ">
+                <ReactMarkdown
+                  components={{
+                    code({ className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const isInline = !className && typeof children === 'string' && !children.includes('\n');
+                      
+                      if (isInline) {
+                        return <InlineCode>{children}</InlineCode>;
+                      }
+                      
+                      return (
+                        <CodeBlock language={match?.[1] || ''}>
+                          {String(children).replace(/\n$/, '')}
+                        </CodeBlock>
+                      );
+                    },
+                    pre({ children }) {
+                      // Just pass through - code block handles its own wrapper
+                      return <>{children}</>;
+                    },
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 py-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-sm text-muted-foreground">Thinking...</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Chat = () => {
   const [searchParams] = useSearchParams();
@@ -448,57 +595,9 @@ const Chat = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-0">
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-                >
-                  <div className="flex-shrink-0">
-                    {message.role === 'user' ? (
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <User className="w-4 h-4 text-primary" />
-                      </div>
-                    ) : (
-                      <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-8 h-8" />
-                    )}
-                  </div>
-                  <div
-                    className={`flex-1 max-w-[85%] ${
-                      message.role === 'user' ? 'text-right' : ''
-                    }`}
-                  >
-                    <div
-                      className={`inline-block rounded-2xl ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground p-4'
-                          : 'glass p-4'
-                      }`}
-                    >
-                      {message.role === 'user' ? (
-                        <p className="whitespace-pre-wrap text-left text-sm">{message.content}</p>
-                      ) : message.content ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-left prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-code:bg-secondary prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-secondary prose-pre:p-3 prose-pre:rounded-lg prose-blockquote:border-l-primary prose-blockquote:pl-4 prose-blockquote:italic">
-                          <ReactMarkdown>{message.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-1">
-                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                            <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                          </div>
-                          <span className="text-sm text-muted-foreground">Thinking...</span>
-                        </div>
-                      )}
-                    </div>
-                    {message.content && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(message.created_at).toLocaleTimeString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <ChatMessage key={message.id} message={message} />
               ))}
               <div ref={messagesEndRef} />
             </div>
