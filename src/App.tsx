@@ -19,7 +19,7 @@ import Career from "./pages/Career";
 import Support from "./pages/Support";
 import About from "./pages/About";
 import Documentation from "./pages/Documentation";
-import BotSetupGuide from "./pages/BotSetupGuide";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,7 +47,7 @@ const App = () => (
             <Route path="/support" element={<Support />} />
             <Route path="/about" element={<About />} />
             <Route path="/docs" element={<Documentation />} />
-            <Route path="/bot-setup" element={<BotSetupGuide />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
