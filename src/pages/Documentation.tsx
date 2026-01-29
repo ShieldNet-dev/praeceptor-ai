@@ -15,7 +15,8 @@ import {
   Award,
   Users,
   Zap,
-  ChevronRight
+  ChevronRight,
+  Bot
 } from 'lucide-react';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 
@@ -167,6 +168,21 @@ const Documentation = () => {
           body: 'Our AI is designed to refuse requests for malicious purposes and will redirect users toward ethical alternatives.'
         }
       ]
+    },
+    {
+      id: 'bot-integrations',
+      title: 'Bot Integrations',
+      icon: Bot,
+      content: [
+        {
+          heading: 'Telegram & Instagram Bots',
+          body: 'Praeceptor AI can be accessed through Telegram and Instagram messaging bots, allowing you to learn on the go directly from your favorite messaging platforms.'
+        },
+        {
+          heading: 'Setup Guide',
+          body: 'For detailed instructions on configuring Telegram and Instagram bot integrations, including webhook setup and secret management, visit our dedicated Bot Setup Guide.'
+        }
+      ]
     }
   ];
 
@@ -279,6 +295,17 @@ const Documentation = () => {
                       <p className="text-muted-foreground text-sm pl-6">
                         {item.body}
                       </p>
+                      {section.id === 'bot-integrations' && item.heading === 'Setup Guide' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="ml-6 mt-2"
+                          onClick={() => navigate('/bot-setup')}
+                        >
+                          <Bot className="w-4 h-4 mr-2" />
+                          Open Bot Setup Guide
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </CardContent>
