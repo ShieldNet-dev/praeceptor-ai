@@ -16,7 +16,9 @@ import {
   Check,
   ThumbsUp,
   ThumbsDown,
-  RotateCcw
+  RotateCcw,
+  PanelLeft,
+  Plus
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +29,8 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
+import ChatSidebar from '@/components/ChatSidebar';
+import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -270,6 +274,7 @@ const Chat = () => {
   const [currentTrack, setCurrentTrack] = useState<GuidanceTrack>('learning');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, loading: authLoading } = useAuth();
@@ -761,6 +766,16 @@ const Chat = () => {
   const track = getTrackById(currentTrack);
   const TrackIcon = track?.icon;
 
+  const handleNewChat = () => {
+    setConversationId(null);
+    setMessages([]);
+    navigate(`/chat?track=${currentTrack}`);
+  };
+
+  const handleSelectConversation = (convId: string) => {
+    navigate(`/chat?conversation=${convId}`);
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -770,68 +785,96 @@ const Chat = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-border/50">
-        <div className="container mx-auto max-w-4xl px-4 py-3 flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/dashboard')}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-3 flex-1">
-            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
-            <div>
-              <h1 className="font-semibold text-foreground">{track?.name || 'Chat'}</h1>
-              <p className="text-xs text-muted-foreground">Praeceptor AI</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/settings')}
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background flex">
+      {/* ChatGPT-style Sidebar */}
+      {user && (
+        <ChatSidebar
+          userId={user.id}
+          currentConversationId={conversationId}
+          currentTrack={currentTrack}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          onNewChat={handleNewChat}
+          onSelectConversation={handleSelectConversation}
+        />
+      )}
 
-      {/* Messages */}
-      <main className="flex-1 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="container mx-auto max-w-4xl px-4 py-12 text-center">
-            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-16 h-16 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">
-              Welcome to {track?.name}
-            </h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              {track?.description}
-            </p>
-            <p className="text-sm text-muted-foreground mt-4">
-              Start by asking a question or describing what you'd like to learn.
-            </p>
+      {/* Main content */}
+      <div className={cn(
+        "flex-1 flex flex-col min-h-screen transition-all duration-300",
+        sidebarOpen ? "ml-64" : "ml-0"
+      )}>
+        {/* Header */}
+        <header className="sticky top-0 z-30 glass border-b border-border/50">
+          <div className="container mx-auto max-w-4xl px-4 py-3 flex items-center gap-4">
+            {!sidebarOpen && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <PanelLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNewChat}
+              title="New chat"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+            <div className="flex items-center gap-3 flex-1">
+              <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
+              <div>
+                <h1 className="font-semibold text-foreground">{track?.name || 'Chat'}</h1>
+                <p className="text-xs text-muted-foreground">Praeceptor AI</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/settings')}
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
           </div>
-        ) : (
-          <div>
-            {messages.map((message, index) => {
-              const isLastAssistant = message.role === 'assistant' && 
-                index === messages.length - 1 || 
-                (index === messages.length - 2 && messages[messages.length - 1]?.role === 'user');
-              return (
-                <ChatMessage 
-                  key={message.id} 
-                  message={message} 
-                  isLastAssistant={isLastAssistant && message.role === 'assistant'}
-                  onRegenerate={isLastAssistant && message.role === 'assistant' ? handleRegenerate : undefined}
-                />
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </main>
+        </header>
+
+        {/* Messages */}
+        <main className="flex-1 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="container mx-auto max-w-4xl px-4 py-12 text-center">
+              <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-16 h-16 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">
+                Welcome to {track?.name}
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {track?.description}
+              </p>
+              <p className="text-sm text-muted-foreground mt-4">
+                Start by asking a question or describing what you'd like to learn.
+              </p>
+            </div>
+          ) : (
+            <div>
+              {messages.map((message, index) => {
+                const isLastAssistant = message.role === 'assistant' && 
+                  index === messages.length - 1 || 
+                  (index === messages.length - 2 && messages[messages.length - 1]?.role === 'user');
+                return (
+                  <ChatMessage 
+                    key={message.id} 
+                    message={message} 
+                    isLastAssistant={isLastAssistant && message.role === 'assistant'}
+                    onRegenerate={isLastAssistant && message.role === 'assistant' ? handleRegenerate : undefined}
+                  />
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </main>
 
       {/* Input area */}
       <footer className="sticky bottom-0 glass border-t border-border/50">
@@ -905,6 +948,7 @@ const Chat = () => {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 };
