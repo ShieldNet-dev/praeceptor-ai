@@ -13,7 +13,10 @@ import {
   Image as ImageIcon,
   Settings,
   Copy,
-  Check
+  Check,
+  ThumbsUp,
+  ThumbsDown,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -98,14 +101,80 @@ const InlineCode = ({ children }: { children: React.ReactNode }) => (
   </code>
 );
 
+// Message actions component
+const MessageActions = ({ 
+  message, 
+  onCopy, 
+  onRegenerate 
+}: { 
+  message: Message; 
+  onCopy: () => void; 
+  onRegenerate: () => void;
+}) => {
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    onCopy();
+  };
+
+  return (
+    <div className="flex items-center gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button
+        onClick={handleCopy}
+        className="p-1.5 rounded-md hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+        title="Copy"
+      >
+        {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+      </button>
+      <button
+        onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
+        className={`p-1.5 rounded-md hover:bg-secondary/80 transition-colors ${
+          feedback === 'up' ? 'text-success' : 'text-muted-foreground hover:text-foreground'
+        }`}
+        title="Good response"
+      >
+        <ThumbsUp className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
+        className={`p-1.5 rounded-md hover:bg-secondary/80 transition-colors ${
+          feedback === 'down' ? 'text-destructive' : 'text-muted-foreground hover:text-foreground'
+        }`}
+        title="Bad response"
+      >
+        <ThumbsDown className="w-4 h-4" />
+      </button>
+      <button
+        onClick={onRegenerate}
+        className="p-1.5 rounded-md hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
+        title="Regenerate"
+      >
+        <RotateCcw className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
 // ChatGPT-style message component
-const ChatMessage = ({ message }: { message: Message }) => {
+const ChatMessage = ({ 
+  message, 
+  onRegenerate,
+  isLastAssistant 
+}: { 
+  message: Message; 
+  onRegenerate?: () => void;
+  isLastAssistant?: boolean;
+}) => {
   const isUser = message.role === 'user';
 
   return (
-    <div className={`py-6 ${isUser ? 'bg-transparent' : 'bg-secondary/20'}`}>
-      <div className="container mx-auto max-w-3xl px-4">
-        <div className="flex gap-4">
+    <div className={`w-full py-6 ${isUser ? 'bg-transparent' : 'bg-secondary/10'}`}>
+      <div className="w-full max-w-4xl mx-auto px-4 md:px-8">
+        <div className="flex gap-4 group">
           {/* Avatar */}
           <div className="flex-shrink-0 mt-1">
             {isUser ? (
@@ -158,7 +227,6 @@ const ChatMessage = ({ message }: { message: Message }) => {
                       );
                     },
                     pre({ children }) {
-                      // Just pass through - code block handles its own wrapper
                       return <>{children}</>;
                     },
                   }}
@@ -175,6 +243,15 @@ const ChatMessage = ({ message }: { message: Message }) => {
                 </div>
                 <span className="text-sm text-muted-foreground">Thinking...</span>
               </div>
+            )}
+
+            {/* Message actions for assistant messages */}
+            {!isUser && message.content && isLastAssistant && onRegenerate && (
+              <MessageActions 
+                message={message} 
+                onCopy={() => {}} 
+                onRegenerate={onRegenerate}
+              />
             )}
           </div>
         </div>
@@ -538,6 +615,149 @@ const Chat = () => {
     }
   };
 
+  const handleRegenerate = async () => {
+    if (messages.length < 2 || sending) return;
+    
+    // Find the last user message
+    const lastUserMsgIndex = [...messages].reverse().findIndex(m => m.role === 'user');
+    if (lastUserMsgIndex === -1) return;
+    
+    const lastUserMsg = messages[messages.length - 1 - lastUserMsgIndex];
+    
+    // Remove the last assistant message
+    setMessages(prev => prev.filter((_, i) => i !== prev.length - 1));
+    
+    // Re-send with the last user message
+    setInput(lastUserMsg.content);
+    setTimeout(() => {
+      setInput('');
+      handleSendMessage(lastUserMsg.content);
+    }, 100);
+  };
+
+  const handleSendMessage = async (messageContent: string) => {
+    if (!messageContent.trim() || !user) return;
+    setSending(true);
+
+    try {
+      let convId = conversationId;
+
+      if (!convId) {
+        const { data: newConv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: user.id,
+            track: currentTrack,
+            title: messageContent.slice(0, 50) + (messageContent.length > 50 ? '...' : '')
+          })
+          .select()
+          .single();
+
+        if (convError || !newConv) throw new Error('Failed to create conversation');
+        convId = newConv.id;
+        setConversationId(convId);
+      }
+
+      // Add placeholder assistant message for streaming
+      const tempAssistantId = `assistant-${Date.now()}`;
+      setMessages((prev) => [...prev, {
+        id: tempAssistantId,
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString()
+      }]);
+
+      // Stream AI response
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/praeceptor-chat`;
+      
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ 
+          message: messageContent, 
+          track: currentTrack, 
+          conversationId: convId,
+          stream: true 
+        }),
+      });
+
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        throw new Error(errorData.error || 'Failed to get AI response');
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let fullResponse = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              fullResponse += content;
+              setMessages((prev) => 
+                prev.map((m) => 
+                  m.id === tempAssistantId 
+                    ? { ...m, content: fullResponse }
+                    : m
+                )
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Save AI message to database
+      const { data: savedAiMsg, error: aiMsgError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: convId,
+          role: 'assistant',
+          content: fullResponse
+        })
+        .select()
+        .single();
+
+      if (aiMsgError) throw aiMsgError;
+
+      setMessages((prev) => 
+        prev.map((m) => (m.id === tempAssistantId ? (savedAiMsg as Message) : m))
+      );
+
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to regenerate');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const track = getTrackById(currentTrack);
   const TrackIcon = track?.icon;
 
@@ -580,29 +800,37 @@ const Chat = () => {
 
       {/* Messages */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto max-w-4xl px-4 py-6">
-          {messages.length === 0 ? (
-            <div className="text-center py-12">
-              <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-16 h-16 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">
-                Welcome to {track?.name}
-              </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                {track?.description}
-              </p>
-              <p className="text-sm text-muted-foreground mt-4">
-                Start by asking a question or describing what you'd like to learn.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-0">
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
+        {messages.length === 0 ? (
+          <div className="container mx-auto max-w-4xl px-4 py-12 text-center">
+            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-16 h-16 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">
+              Welcome to {track?.name}
+            </h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {track?.description}
+            </p>
+            <p className="text-sm text-muted-foreground mt-4">
+              Start by asking a question or describing what you'd like to learn.
+            </p>
+          </div>
+        ) : (
+          <div>
+            {messages.map((message, index) => {
+              const isLastAssistant = message.role === 'assistant' && 
+                index === messages.length - 1 || 
+                (index === messages.length - 2 && messages[messages.length - 1]?.role === 'user');
+              return (
+                <ChatMessage 
+                  key={message.id} 
+                  message={message} 
+                  isLastAssistant={isLastAssistant && message.role === 'assistant'}
+                  onRegenerate={isLastAssistant && message.role === 'assistant' ? handleRegenerate : undefined}
+                />
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </main>
 
       {/* Input area */}
