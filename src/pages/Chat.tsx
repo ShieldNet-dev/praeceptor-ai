@@ -277,7 +277,20 @@ const Chat = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { user, loading: authLoading } = useAuth();
+
+  // Auto-resize textarea as user types
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set the height to scrollHeight, capped at max-height
+      const newHeight = Math.min(textarea.scrollHeight, 200);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [input]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -940,12 +953,13 @@ const Chat = () => {
 
               {/* Textarea */}
               <Textarea
+                ref={textareaRef}
                 placeholder="Message Praeceptor AI..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                className="flex-1 resize-none min-h-[36px] max-h-[200px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 px-1 text-base"
+                className="flex-1 resize-none min-h-[36px] max-h-[200px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 px-1 text-base overflow-y-auto"
               />
 
               {/* Send button */}
