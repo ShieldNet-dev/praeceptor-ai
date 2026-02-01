@@ -801,17 +801,18 @@ const Chat = () => {
 
       {/* Main content */}
       <div className={cn(
-        "flex-1 flex flex-col min-h-screen transition-all duration-300",
-        sidebarOpen ? "ml-64" : "ml-0"
+        "flex-1 flex flex-col h-screen transition-all duration-300",
+        sidebarOpen ? "md:ml-64" : "ml-0"
       )}>
         {/* Header */}
-        <header className="sticky top-0 z-30 glass border-b border-border/50">
-          <div className="container mx-auto max-w-4xl px-4 py-3 flex items-center gap-4">
+        <header className="sticky top-0 z-30 glass border-b border-border/50 flex-shrink-0">
+          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
             {!sidebarOpen && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(true)}
+                className="hidden md:flex"
               >
                 <PanelLeft className="w-5 h-5" />
               </Button>
@@ -824,11 +825,11 @@ const Chat = () => {
             >
               <Plus className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3 flex-1">
-              <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
-              <div>
-                <h1 className="font-semibold text-foreground">{track?.name || 'Chat'}</h1>
-                <p className="text-xs text-muted-foreground">Praeceptor AI</p>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0" />
+              <div className="min-w-0">
+                <h1 className="font-semibold text-foreground truncate">{track?.name || 'Chat'}</h1>
+                <p className="text-xs text-muted-foreground hidden sm:block">Praeceptor AI</p>
               </div>
             </div>
             <Button
@@ -841,10 +842,10 @@ const Chat = () => {
           </div>
         </header>
 
-        {/* Messages */}
+        {/* Messages - scrollable area */}
         <main className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
-            <div className="container mx-auto max-w-4xl px-4 py-12 text-center">
+            <div className="max-w-4xl mx-auto px-4 py-12 text-center">
               <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-16 h-16 mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2">
                 Welcome to {track?.name}
@@ -857,7 +858,7 @@ const Chat = () => {
               </p>
             </div>
           ) : (
-            <div>
+            <div className="pb-4">
               {messages.map((message, index) => {
                 const isLastAssistant = message.role === 'assistant' && 
                   index === messages.length - 1 || 
@@ -876,78 +877,99 @@ const Chat = () => {
           )}
         </main>
 
-      {/* Input area */}
-      <footer className="sticky bottom-0 glass border-t border-border/50">
-        <div className="container mx-auto max-w-4xl px-4 py-4">
-          {/* Uploaded files preview */}
-          {uploadedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {uploadedFiles.map((file, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-sm"
-                >
-                  {file.type.startsWith('image/') ? (
-                    <ImageIcon className="w-4 h-4 text-primary" />
-                  ) : (
-                    <FileText className="w-4 h-4 text-primary" />
-                  )}
-                  <span className="max-w-[150px] truncate">{file.name}</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-muted-foreground hover:text-foreground"
+        {/* Input area - ChatGPT style fixed at bottom */}
+        <footer className="flex-shrink-0 border-t border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            {/* Uploaded files preview */}
+            {uploadedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {uploadedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-sm"
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    {file.type.startsWith('image/') ? (
+                      <ImageIcon className="w-4 h-4 text-primary" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-primary" />
+                    )}
+                    <span className="max-w-[120px] sm:max-w-[150px] truncate">{file.name}</span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-          <div className="flex gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,.pdf,.doc,.docx,.txt"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Paperclip className="w-5 h-5" />
-              )}
-            </Button>
-            <VoiceInput 
-              onTranscript={(text) => setInput((prev) => prev + (prev ? ' ' : '') + text)}
-              disabled={sending}
-            />
-            <Textarea
-              placeholder="Ask Praeceptor AI anything..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              className="resize-none min-h-[44px] max-h-32 flex-1"
-            />
-            <Button
-              variant="hero"
-              size="icon"
-              onClick={handleSend}
-              disabled={sending || (!input.trim() && uploadedFiles.length === 0)}
-            >
-              <Send className="w-5 h-5" />
-            </Button>
+            {/* Input container - ChatGPT style rounded box */}
+            <div className="relative flex items-end gap-2 p-2 rounded-2xl border border-border/50 bg-secondary/30 shadow-sm">
+              {/* Attachment button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="h-9 w-9 flex-shrink-0 rounded-xl hover:bg-secondary"
+              >
+                {uploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Paperclip className="w-5 h-5" />
+                )}
+              </Button>
+
+              {/* Voice input */}
+              <div className="flex-shrink-0">
+                <VoiceInput 
+                  onTranscript={(text) => setInput((prev) => prev + (prev ? ' ' : '') + text)}
+                  disabled={sending}
+                />
+              </div>
+
+              {/* Textarea */}
+              <Textarea
+                placeholder="Message Praeceptor AI..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                className="flex-1 resize-none min-h-[36px] max-h-[200px] border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 py-2 px-1 text-base"
+              />
+
+              {/* Send button */}
+              <Button
+                variant="hero"
+                size="icon"
+                onClick={handleSend}
+                disabled={sending || (!input.trim() && uploadedFiles.length === 0)}
+                className="h-9 w-9 flex-shrink-0 rounded-xl"
+              >
+                {sending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+
+            {/* Disclaimer text like ChatGPT */}
+            <p className="text-xs text-muted-foreground text-center mt-2 hidden sm:block">
+              Praeceptor AI can make mistakes. Consider checking important information.
+            </p>
           </div>
-        </div>
-      </footer>
+        </footer>
       </div>
     </div>
   );
