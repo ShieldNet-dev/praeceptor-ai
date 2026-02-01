@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { useAuth } from '@/hooks/useAuth';
+import { useStreakTracker } from '@/hooks/useStreakTracker';
 import { supabase } from '@/integrations/supabase/client';
 import { TRACKS, GuidanceTrack, getTrackById } from '@/types/tracks';
 import { toast } from 'sonner';
@@ -55,6 +56,9 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Track streak on login
+  useStreakTracker(user);
 
   useEffect(() => {
     if (!authLoading && !user) {
