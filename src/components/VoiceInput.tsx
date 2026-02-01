@@ -1,8 +1,38 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Web Speech API types
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  onstart: (() => void) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
@@ -12,81 +42,116 @@ interface VoiceInputProps {
 const VoiceInput = ({ onTranscript, disabled }: VoiceInputProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
+  const transcriptRef = useRef('');
+
+  const initRecognition = useCallback(() => {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionAPI) {
+      toast.error('Speech recognition not supported in this browser');
+      return null;
+    }
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        transcriptRef.current += finalTranscript;
+      }
+    };
+
+    recognition.onend = () => {
+      if (isListeningRef.current) {
+        // Auto-restart if user hasn't stopped
+        try {
+          recognition.start();
+        } catch (e) {
+          // Already started or other error
+        }
+      } else {
+        // User stopped - send the transcript
+        setIsRecording(false);
+        setIsProcessing(false);
+        
+        if (transcriptRef.current.trim()) {
+          onTranscript(transcriptRef.current.trim());
+          toast.success('Voice transcribed successfully');
+        } else {
+          toast.info('No speech detected');
+        }
+        transcriptRef.current = '';
+      }
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error('Speech recognition error:', event.error);
+      
+      if (event.error === 'not-allowed') {
+        toast.error('Microphone permission denied. Please allow microphone access.');
+        isListeningRef.current = false;
+        setIsRecording(false);
+        setIsProcessing(false);
+      } else if (event.error === 'no-speech') {
+        // This is normal - silence detected, will auto-restart via onend
+      } else if (event.error === 'aborted') {
+        // User aborted, ignore
+      } else {
+        toast.error(`Speech recognition error: ${event.error}`);
+        isListeningRef.current = false;
+        setIsRecording(false);
+        setIsProcessing(false);
+      }
+    };
+
+    return recognition;
+  }, [onTranscript]);
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      // Request microphone permission first
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
+      if (!recognitionRef.current) {
+        recognitionRef.current = initRecognition();
+      }
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (audioBlob.size > 0) {
-          await processAudio(audioBlob);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
+      if (recognitionRef.current) {
+        transcriptRef.current = '';
+        isListeningRef.current = true;
+        setIsRecording(true);
+        recognitionRef.current.start();
+      }
     } catch (error) {
+      console.error('Microphone access error:', error);
       toast.error('Could not access microphone. Please check permissions.');
     }
-  }, []);
+  }, [initRecognition]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  }, [isRecording]);
-
-  const processAudio = async (audioBlob: Blob) => {
+    isListeningRef.current = false;
     setIsProcessing(true);
     
-    try {
-      // Convert blob to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
-        };
-      });
-      reader.readAsDataURL(audioBlob);
-      const base64Audio = await base64Promise;
-
-      // Send to edge function for transcription
-      const { data, error } = await supabase.functions.invoke('voice-to-text', {
-        body: { audio: base64Audio }
-      });
-
-      if (error) throw error;
-      
-      if (data?.text) {
-        onTranscript(data.text);
-        toast.success('Voice transcribed successfully');
-      } else {
-        toast.error('No speech detected');
-      }
-    } catch (error: any) {
-      console.error('Transcription error:', error);
-      toast.error('Failed to transcribe audio');
-    } finally {
-      setIsProcessing(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
     }
-  };
+  }, []);
 
   const handleClick = () => {
     if (isRecording) {
@@ -96,6 +161,16 @@ const VoiceInput = ({ onTranscript, disabled }: VoiceInputProps) => {
     }
   };
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        isListeningRef.current = false;
+        recognitionRef.current.abort();
+      }
+    };
+  }, []);
+
   return (
     <Button
       variant="outline"
@@ -103,6 +178,7 @@ const VoiceInput = ({ onTranscript, disabled }: VoiceInputProps) => {
       onClick={handleClick}
       disabled={disabled || isProcessing}
       className={isRecording ? 'bg-destructive/20 border-destructive text-destructive animate-pulse' : ''}
+      title={isRecording ? 'Stop recording' : 'Start voice input'}
     >
       {isProcessing ? (
         <Loader2 className="w-5 h-5 animate-spin" />
