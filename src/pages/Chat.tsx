@@ -502,8 +502,13 @@ const Chat = () => {
         created_at: new Date().toISOString()
       }]);
 
-      // Stream AI response
+      // Stream AI response with conversation history
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/praeceptor-chat`;
+      
+      // Prepare conversation history for context (exclude the just-added user message)
+      const historyForAI = messages
+        .filter(m => m.id !== tempUserMsg.id)
+        .map(m => ({ role: m.role, content: m.content }));
       
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -515,6 +520,7 @@ const Chat = () => {
           message: messageContent, 
           track: currentTrack, 
           conversationId: convId,
+          history: historyForAI,
           stream: true 
         }),
       });
