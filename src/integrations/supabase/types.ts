@@ -74,6 +74,101 @@ export type Database = {
         }
         Relationships: []
       }
+      course_modules: {
+        Row: {
+          content: string
+          course_id: string
+          created_at: string
+          description: string
+          estimated_minutes: number
+          id: string
+          learning_objectives: Json
+          order_index: number
+          title: string
+          updated_at: string
+          xp_reward: number
+        }
+        Insert: {
+          content: string
+          course_id: string
+          created_at?: string
+          description: string
+          estimated_minutes?: number
+          id?: string
+          learning_objectives?: Json
+          order_index?: number
+          title: string
+          updated_at?: string
+          xp_reward?: number
+        }
+        Update: {
+          content?: string
+          course_id?: string
+          created_at?: string
+          description?: string
+          estimated_minutes?: number
+          id?: string
+          learning_objectives?: Json
+          order_index?: number
+          title?: string
+          updated_at?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          color: string
+          created_at: string
+          description: string
+          difficulty: string
+          estimated_hours: number
+          icon: string
+          id: string
+          is_published: boolean
+          order_index: number
+          title: string
+          total_xp: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description: string
+          difficulty?: string
+          estimated_hours?: number
+          icon?: string
+          id?: string
+          is_published?: boolean
+          order_index?: number
+          title: string
+          total_xp?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string
+          difficulty?: string
+          estimated_hours?: number
+          icon?: string
+          id?: string
+          is_published?: boolean
+          order_index?: number
+          title?: string
+          total_xp?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_challenges: {
         Row: {
           challenge_date: string
@@ -140,48 +235,6 @@ export type Database = {
           is_published?: boolean
           question?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      lessons: {
-        Row: {
-          content: string
-          created_at: string
-          description: string
-          difficulty: string
-          id: string
-          is_published: boolean
-          order_index: number
-          title: string
-          topic: string
-          updated_at: string
-          xp_reward: number
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          description: string
-          difficulty?: string
-          id?: string
-          is_published?: boolean
-          order_index?: number
-          title: string
-          topic: string
-          updated_at?: string
-          xp_reward?: number
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          description?: string
-          difficulty?: string
-          id?: string
-          is_published?: boolean
-          order_index?: number
-          title?: string
-          topic?: string
-          updated_at?: string
-          xp_reward?: number
         }
         Relationships: []
       }
@@ -286,6 +339,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_course_progress: {
+        Row: {
+          completed_at: string | null
+          course_id: string
+          current_module_index: number
+          final_assessment_passed: boolean | null
+          id: string
+          is_completed: boolean
+          started_at: string
+          total_xp_earned: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          course_id: string
+          current_module_index?: number
+          final_assessment_passed?: boolean | null
+          id?: string
+          is_completed?: boolean
+          started_at?: string
+          total_xp_earned?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          course_id?: string
+          current_module_index?: number
+          final_assessment_passed?: boolean | null
+          id?: string
+          is_completed?: boolean
+          started_at?: string
+          total_xp_earned?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_course_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_daily_challenge_progress: {
         Row: {
           challenge_id: string
@@ -321,34 +418,59 @@ export type Database = {
           },
         ]
       }
-      user_lesson_progress: {
+      user_module_progress: {
         Row: {
-          completed_at: string
+          ai_assessment_conversation_id: string | null
+          assessment_passed: boolean | null
+          assessment_score: number | null
+          completed_at: string | null
+          content_read: boolean
+          course_id: string
           id: string
-          lesson_id: string
+          module_id: string
+          started_at: string
           user_id: string
           xp_earned: number
         }
         Insert: {
-          completed_at?: string
+          ai_assessment_conversation_id?: string | null
+          assessment_passed?: boolean | null
+          assessment_score?: number | null
+          completed_at?: string | null
+          content_read?: boolean
+          course_id: string
           id?: string
-          lesson_id: string
+          module_id: string
+          started_at?: string
           user_id: string
           xp_earned?: number
         }
         Update: {
-          completed_at?: string
+          ai_assessment_conversation_id?: string | null
+          assessment_passed?: boolean | null
+          assessment_score?: number | null
+          completed_at?: string | null
+          content_read?: boolean
+          course_id?: string
           id?: string
-          lesson_id?: string
+          module_id?: string
+          started_at?: string
           user_id?: string
           xp_earned?: number
         }
         Relationships: [
           {
-            foreignKeyName: "user_lesson_progress_lesson_id_fkey"
-            columns: ["lesson_id"]
+            foreignKeyName: "user_module_progress_course_id_fkey"
+            columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "lessons"
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_module_progress_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
             referencedColumns: ["id"]
           },
         ]
