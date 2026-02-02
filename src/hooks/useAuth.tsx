@@ -65,8 +65,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     try {
+      // Use just the origin for redirect - the onAuthStateChange will handle navigation
       const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: `${window.location.origin}/onboarding`,
+        redirect_uri: window.location.origin,
       });
       
       if (result.error) {
