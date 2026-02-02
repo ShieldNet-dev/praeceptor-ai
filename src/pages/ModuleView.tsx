@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,46 +41,167 @@ const ModuleView = () => {
   const [sending, setSending] = useState(false);
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<{passed: boolean; score: number} | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [loadingSession, setLoadingSession] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentModule = modules.find(m => m.id === moduleId);
   const currentIndex = modules.findIndex(m => m.id === moduleId);
   const nextModule = currentIndex < modules.length - 1 ? modules[currentIndex + 1] : null;
 
-  useEffect(() => {
-    if (currentModule?.progress?.content_read && !currentModule?.isCompleted) {
-      setStage('assessment');
-    } else if (currentModule?.isCompleted) {
-      setStage('complete');
-      setAssessmentResult({
-        passed: true,
-        score: currentModule.progress?.assessment_score || 100
-      });
+  // Load existing assessment session if available
+  const loadExistingSession = useCallback(async () => {
+    if (!currentModule?.progress?.ai_assessment_conversation_id || !user) return false;
+    
+    setLoadingSession(true);
+    try {
+      const { data: existingMessages, error } = await supabase
+        .from('messages')
+        .select('role, content')
+        .eq('conversation_id', currentModule.progress.ai_assessment_conversation_id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (existingMessages && existingMessages.length > 0) {
+        setConversationId(currentModule.progress.ai_assessment_conversation_id);
+        setMessages(existingMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })));
+        setStage('assessment');
+        setLoadingSession(false);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error loading existing session:', error);
     }
-  }, [currentModule]);
+    setLoadingSession(false);
+    return false;
+  }, [currentModule?.progress?.ai_assessment_conversation_id, user]);
+
+  // Effect to determine initial stage and load existing session
+  useEffect(() => {
+    const initializeStage = async () => {
+      if (currentModule?.isCompleted) {
+        setStage('complete');
+        setAssessmentResult({
+          passed: true,
+          score: currentModule.progress?.assessment_score || 100
+        });
+      } else if (currentModule?.progress?.ai_assessment_conversation_id) {
+        // Has an existing assessment conversation - load it
+        const loaded = await loadExistingSession();
+        if (!loaded && currentModule?.progress?.content_read) {
+          setStage('assessment');
+        }
+      } else if (currentModule?.progress?.content_read) {
+        setStage('assessment');
+      }
+    };
+    
+    initializeStage();
+  }, [currentModule, loadExistingSession]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Create a new assessment conversation
+  const createAssessmentConversation = async (): Promise<string | null> => {
+    if (!user || !currentModule || !courseId) return null;
+
+    try {
+      // Create a new conversation for this assessment
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          track: 'learning',
+          title: `Assessment: ${currentModule.title}`
+        })
+        .select('id')
+        .single();
+
+      if (convError) throw convError;
+
+      // Update the module progress with the conversation ID
+      const { data: existingProgress } = await supabase
+        .from('user_module_progress')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('module_id', currentModule.id)
+        .single();
+
+      if (existingProgress) {
+        await supabase
+          .from('user_module_progress')
+          .update({ ai_assessment_conversation_id: conversation.id })
+          .eq('id', existingProgress.id);
+      } else {
+        await supabase
+          .from('user_module_progress')
+          .insert({
+            user_id: user.id,
+            module_id: currentModule.id,
+            course_id: courseId,
+            content_read: true,
+            ai_assessment_conversation_id: conversation.id
+          });
+      }
+
+      return conversation.id;
+    } catch (error) {
+      console.error('Error creating assessment conversation:', error);
+      return null;
+    }
+  };
+
+  // Save a message to the database
+  const saveMessage = async (convId: string, role: string, content: string) => {
+    try {
+      await supabase
+        .from('messages')
+        .insert({
+          conversation_id: convId,
+          role,
+          content
+        });
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
+
   const handleMarkContentRead = async () => {
     if (!currentModule || !courseId) return;
     await markModuleContentRead(currentModule.id, courseId);
-    setStage('assessment');
-    
-    // Initialize assessment with Praeceptor
-    const systemMessage = `I've finished reading the module "${currentModule.title}". I'm ready for my assessment.`;
-    await sendAssessmentMessage(systemMessage, true);
+    await startAssessment();
   };
 
-  const sendAssessmentMessage = async (message: string, isInitial = false) => {
+  const startAssessment = async () => {
+    setStage('assessment');
+    
+    // Create conversation and start assessment
+    const convId = await createAssessmentConversation();
+    if (convId) {
+      setConversationId(convId);
+      await sendAssessmentMessage("I'm ready for my module assessment.", true, convId);
+    } else {
+      toast.error('Failed to start assessment. Please try again.');
+    }
+  };
+
+  const sendAssessmentMessage = async (message: string, isInitial = false, convIdOverride?: string) => {
     if (!user || !currentModule) return;
+
+    const activeConvId = convIdOverride || conversationId;
 
     setSending(true);
     
     const userMessage: AssessmentMessage = { role: 'user', content: message };
     if (!isInitial) {
       setMessages(prev => [...prev, userMessage]);
+      // Save user message to database
+      if (activeConvId) {
+        await saveMessage(activeConvId, 'user', message);
+      }
     }
     setInput('');
 
@@ -140,6 +261,11 @@ Start by welcoming them to the assessment and asking your first question.`;
       if (assistantContent) {
         const assistantMessage: AssessmentMessage = { role: 'assistant', content: assistantContent };
         setMessages(prev => isInitial ? [assistantMessage] : [...prev, assistantMessage]);
+
+        // Save assistant message to database
+        if (activeConvId) {
+          await saveMessage(activeConvId, 'assistant', assistantContent);
+        }
 
         // Check if assessment is complete
         if (assistantContent.includes('ASSESSMENT RESULT:') || 
@@ -429,18 +555,41 @@ Start by welcoming them to the assessment and asking your first question.`;
       </main>
 
       {/* Bottom Actions */}
-      {stage === 'content' && (
+      {stage === 'content' && !loadingSession && (
         <div className="fixed bottom-0 left-0 right-0 p-4 glass border-t border-border shadow-lg">
           <div className="container mx-auto max-w-4xl">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground text-center sm:text-left">
-                Ready to test your understanding? Complete the AI-powered assessment to earn XP.
-              </p>
-              <Button className="w-full sm:w-auto min-w-[200px]" size="lg" onClick={handleMarkContentRead}>
-                Take Assessment
-                <MessageSquare className="w-5 h-5 ml-2" />
-              </Button>
+              {currentModule?.progress?.ai_assessment_conversation_id && !currentModule?.isCompleted ? (
+                <>
+                  <p className="text-sm text-muted-foreground text-center sm:text-left">
+                    You have an assessment in progress. Continue where you left off.
+                  </p>
+                  <Button className="w-full sm:w-auto min-w-[200px]" size="lg" onClick={loadExistingSession}>
+                    Continue Assessment
+                    <ChevronRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground text-center sm:text-left">
+                    Ready to test your understanding? Complete the AI-powered assessment to earn XP.
+                  </p>
+                  <Button className="w-full sm:w-auto min-w-[200px]" size="lg" onClick={handleMarkContentRead}>
+                    Take Assessment
+                    <MessageSquare className="w-5 h-5 ml-2" />
+                  </Button>
+                </>
+              )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {stage === 'content' && loadingSession && (
+        <div className="fixed bottom-0 left-0 right-0 p-4 glass border-t border-border shadow-lg">
+          <div className="container mx-auto max-w-4xl flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground">Loading your previous session...</span>
           </div>
         </div>
       )}
@@ -478,14 +627,21 @@ Start by welcoming them to the assessment and asking your first question.`;
               setMessages([]);
               setAssessmentComplete(false);
               setAssessmentResult(null);
+              setConversationId(null);
             }}>
               Review Content
             </Button>
-            <Button className="flex-1" onClick={() => {
+            <Button className="flex-1" onClick={async () => {
               setMessages([]);
               setAssessmentComplete(false);
               setAssessmentResult(null);
-              sendAssessmentMessage("I'm ready for my module assessment.", true);
+              setConversationId(null);
+              // Create a new conversation for the retry
+              const convId = await createAssessmentConversation();
+              if (convId) {
+                setConversationId(convId);
+                await sendAssessmentMessage("I'm ready for my module assessment.", true, convId);
+              }
             }}>
               Retry Assessment
             </Button>
