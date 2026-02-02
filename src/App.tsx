@@ -19,7 +19,9 @@ import Career from "./pages/Career";
 import Support from "./pages/Support";
 import About from "./pages/About";
 import Documentation from "./pages/Documentation";
-import Lessons from "./pages/Lessons";
+import Courses from "./pages/Courses";
+import CourseDetail from "./pages/CourseDetail";
+import ModuleView from "./pages/ModuleView";
 
 import NotFound from "./pages/NotFound";
 
@@ -48,7 +50,9 @@ const App = () => (
             <Route path="/support" element={<Support />} />
             <Route path="/about" element={<About />} />
             <Route path="/docs" element={<Documentation />} />
-            <Route path="/lessons" element={<Lessons />} />
+            <Route path="/courses" element={<Courses />} />
+            <Route path="/courses/:courseId" element={<CourseDetail />} />
+            <Route path="/courses/:courseId/modules/:moduleId" element={<ModuleView />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

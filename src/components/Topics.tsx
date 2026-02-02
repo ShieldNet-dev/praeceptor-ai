@@ -59,13 +59,13 @@ const Topics = () => {
       <div className="container mx-auto max-w-6xl">
         <div className="text-center mb-16 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
           <span className="inline-block px-4 py-1.5 mb-4 text-sm font-mono text-primary bg-primary/10 rounded-full border border-primary/20">
-            &lt;curriculum /&gt;
+            &lt;courses /&gt;
           </span>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Explore <span className="text-gradient">Security Topics</span>
+            Explore <span className="text-gradient">Security Courses</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            From fundamentals to advanced techniques, our comprehensive curriculum covers every aspect of modern cybersecurity.
+            From fundamentals to advanced techniques, our comprehensive courses cover every aspect of modern cybersecurity with structured modules and AI-powered assessments.
           </p>
         </div>
 
@@ -90,7 +90,7 @@ const Topics = () => {
                 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
                   <span className="text-sm text-muted-foreground">
-                    Learn with AI
+                    Structured Modules
                   </span>
                   <span className={`text-xs px-3 py-1 rounded-full ${
                     topic.level === "Beginner" 
@@ -109,13 +109,13 @@ const Topics = () => {
           ))}
         </div>
 
-        {/* Note about more topics */}
+        {/* Note about more courses */}
         <div className="mt-12 text-center opacity-0 animate-fade-in-up" style={{ animationDelay: '0.8s', animationFillMode: 'forwards' }}>
           <p className="text-muted-foreground mb-2">
-            <span className="text-primary font-semibold">30+ security topics</span> available including Blockchain, IoT, VoIP, Malware Analysis, and more!
+            <span className="text-primary font-semibold">10+ comprehensive courses</span> with structured modules, AI assessments, and XP rewards!
           </p>
           <p className="text-sm text-muted-foreground">
-            More topics coming soon. Want a new topic? Submit your request in the review section after signing up.
+            Each course includes multiple modules with hands-on content and Praeceptor AI assessments.
           </p>
         </div>
       </div>
