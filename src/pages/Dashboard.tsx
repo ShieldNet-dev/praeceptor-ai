@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { DailyChallenge } from '@/components/DailyChallenge';
+import { CourseProgressCard } from '@/components/CourseProgressCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreakTracker } from '@/hooks/useStreakTracker';
 import { supabase } from '@/integrations/supabase/client';
@@ -348,10 +349,19 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Daily Challenge Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Daily Cyber Challenge</h2>
-          <DailyChallenge />
+        {/* Course Progress & Daily Challenge - Side by side on desktop */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+          {/* Course Progress */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
+            <CourseProgressCard />
+          </div>
+          
+          {/* Daily Challenge Section */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Daily Cyber Challenge</h2>
+            <DailyChallenge />
+          </div>
         </div>
 
         {/* Quick Access Section */}
