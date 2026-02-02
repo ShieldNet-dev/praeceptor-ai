@@ -15,8 +15,16 @@ const Onboarding = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Refresh session in case user just returned from OAuth
+    const refreshSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session && !authLoading) {
+        navigate('/auth');
+      }
+    };
+    
     if (!authLoading && !user) {
-      navigate('/auth');
+      refreshSession();
     }
   }, [user, authLoading, navigate]);
 

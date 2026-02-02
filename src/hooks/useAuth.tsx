@@ -64,10 +64,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: `${window.location.origin}/onboarding`,
-    });
-    return { error: result.error };
+    try {
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: `${window.location.origin}/onboarding`,
+      });
+      
+      if (result.error) {
+        console.error('Google OAuth error:', result.error);
+        return { error: result.error };
+      }
+      
+      // If redirected, the page will navigate away
+      if (result.redirected) {
+        return { error: null };
+      }
+      
+      // After successful OAuth, refresh the session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Session error after OAuth:', sessionError);
+        return { error: sessionError };
+      }
+      
+      if (session) {
+        setSession(session);
+        setUser(session.user);
+      }
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Google OAuth exception:', error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
+    }
   };
 
   const resetPassword = async (email: string) => {
