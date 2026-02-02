@@ -359,13 +359,13 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold mb-4">Quick Access</h2>
           <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
             <button
-              onClick={() => navigate('/lessons')}
+              onClick={() => navigate('/courses')}
               className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
               <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-primary to-accent text-white mb-3">
                 <GraduationCap className="w-4 h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Lessons</h3>
+              <h3 className="font-medium text-foreground text-sm">Courses</h3>
               <p className="text-xs text-muted-foreground mt-1">Earn XP</p>
             </button>
             <button

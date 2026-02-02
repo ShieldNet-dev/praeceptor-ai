@@ -51,47 +51,6 @@ export const useXP = () => {
     }
   };
 
-  const completeLesson = async (userId: string, lessonId: string, xpReward: number, track: GuidanceTrack) => {
-    try {
-      // Check if already completed
-      const { data: existing } = await supabase
-        .from('user_lesson_progress')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('lesson_id', lessonId)
-        .single();
-
-      if (existing) {
-        toast.info('You\'ve already completed this lesson!');
-        return false;
-      }
-
-      // Record completion
-      const { error: progressError } = await supabase
-        .from('user_lesson_progress')
-        .insert([{
-          user_id: userId,
-          lesson_id: lessonId,
-          xp_earned: xpReward
-        }]);
-
-      if (progressError) throw progressError;
-
-      // Award XP
-      await awardXP(userId, track, xpReward);
-
-      toast.success(`+${xpReward} XP earned!`, {
-        description: 'Lesson completed successfully!'
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Error completing lesson:', error);
-      toast.error('Failed to record progress');
-      return false;
-    }
-  };
-
   const completeDailyChallenge = async (
     userId: string, 
     challengeId: string, 
@@ -151,7 +110,6 @@ export const useXP = () => {
 
   return {
     awardXP,
-    completeLesson,
     completeDailyChallenge
   };
 };
