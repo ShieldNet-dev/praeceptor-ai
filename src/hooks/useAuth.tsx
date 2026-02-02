@@ -65,34 +65,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     try {
-      // Use just the origin for redirect - the onAuthStateChange will handle navigation
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin,
-      });
-      
-      if (result.error) {
-        console.error('Google OAuth error:', result.error);
-        return { error: result.error };
-      }
-      
-      // If redirected, the page will navigate away
-      if (result.redirected) {
+      // Detect if we're on a custom domain (not a lovable.app or lovableproject.com domain)
+      const isCustomDomain =
+        !window.location.hostname.includes("lovable.app") &&
+        !window.location.hostname.includes("lovableproject.com") &&
+        !window.location.hostname.includes("localhost");
+
+      if (isCustomDomain) {
+        // For custom domains, bypass the auth-bridge by getting the OAuth URL directly
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/onboarding`,
+            skipBrowserRedirect: true,
+          },
+        });
+
+        if (error) {
+          console.error('Google OAuth error:', error);
+          return { error };
+        }
+
+        // Validate the OAuth URL before redirecting
+        if (data?.url) {
+          const oauthUrl = new URL(data.url);
+          const allowedHosts = ["accounts.google.com"];
+          if (!allowedHosts.some((host) => oauthUrl.hostname === host)) {
+            return { error: new Error("Invalid OAuth redirect URL") };
+          }
+          // Manually redirect the user to the OAuth provider
+          window.location.href = data.url;
+        }
+        return { error: null };
+      } else {
+        // For Lovable preview domains, use the managed OAuth flow
+        const result = await lovable.auth.signInWithOAuth('google', {
+          redirect_uri: window.location.origin,
+        });
+        
+        if (result.error) {
+          console.error('Google OAuth error:', result.error);
+          return { error: result.error };
+        }
+        
+        if (result.redirected) {
+          return { error: null };
+        }
+        
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error('Session error after OAuth:', sessionError);
+          return { error: sessionError };
+        }
+        
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+        }
+        
         return { error: null };
       }
-      
-      // After successful OAuth, refresh the session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.error('Session error after OAuth:', sessionError);
-        return { error: sessionError };
-      }
-      
-      if (session) {
-        setSession(session);
-        setUser(session.user);
-      }
-      
-      return { error: null };
     } catch (error) {
       console.error('Google OAuth exception:', error);
       return { error: error instanceof Error ? error : new Error(String(error)) };
