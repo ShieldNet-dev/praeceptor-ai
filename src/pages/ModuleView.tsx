@@ -263,8 +263,98 @@ Start by welcoming them to the assessment and asking your first question.`;
 
         {/* Content Stage */}
         {stage === 'content' && (
-          <div className="prose prose-sm dark:prose-invert max-w-none mb-8">
-            <ReactMarkdown>{currentModule.content}</ReactMarkdown>
+          <div className="module-content mb-8">
+            <ReactMarkdown
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground mt-8 mb-4 first:mt-0">
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-xl md:text-2xl font-bold text-foreground mt-8 mb-4 border-b border-border/50 pb-2">
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-lg md:text-xl font-semibold text-foreground mt-6 mb-3">
+                    {children}
+                  </h3>
+                ),
+                h4: ({ children }) => (
+                  <h4 className="text-base md:text-lg font-semibold text-foreground mt-4 mb-2">
+                    {children}
+                  </h4>
+                ),
+                p: ({ children }) => (
+                  <p className="text-muted-foreground leading-relaxed mb-4 text-base">
+                    {children}
+                  </p>
+                ),
+                ul: ({ children }) => (
+                  <ul className="list-disc list-outside ml-6 mb-4 space-y-2 text-muted-foreground">
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="list-decimal list-outside ml-6 mb-4 space-y-2 text-muted-foreground">
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-base leading-relaxed pl-1">
+                    {children}
+                  </li>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-foreground">
+                    {children}
+                  </strong>
+                ),
+                em: ({ children }) => (
+                  <em className="italic text-foreground/90">
+                    {children}
+                  </em>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-primary/50 pl-4 py-2 my-4 bg-primary/5 rounded-r-lg italic text-muted-foreground">
+                    {children}
+                  </blockquote>
+                ),
+                code: ({ children, className }) => {
+                  const isInline = !className;
+                  return isInline ? (
+                    <code className="bg-secondary/80 text-primary px-1.5 py-0.5 rounded text-sm font-mono">
+                      {children}
+                    </code>
+                  ) : (
+                    <code className="block bg-secondary/80 p-4 rounded-lg overflow-x-auto text-sm font-mono my-4">
+                      {children}
+                    </code>
+                  );
+                },
+                pre: ({ children }) => (
+                  <pre className="bg-secondary/80 p-4 rounded-lg overflow-x-auto my-4 border border-border/50">
+                    {children}
+                  </pre>
+                ),
+                hr: () => (
+                  <hr className="border-border/50 my-8" />
+                ),
+                a: ({ href, children }) => (
+                  <a 
+                    href={href} 
+                    className="text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {children}
+                  </a>
+                ),
+              }}
+            >
+              {currentModule.content}
+            </ReactMarkdown>
           </div>
         )}
 
@@ -340,12 +430,17 @@ Start by welcoming them to the assessment and asking your first question.`;
 
       {/* Bottom Actions */}
       {stage === 'content' && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 glass border-t border-border">
+        <div className="fixed bottom-0 left-0 right-0 p-4 glass border-t border-border shadow-lg">
           <div className="container mx-auto max-w-4xl">
-            <Button className="w-full" size="lg" onClick={handleMarkContentRead}>
-              I've Read This - Start Assessment
-              <MessageSquare className="w-5 h-5 ml-2" />
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground text-center sm:text-left">
+                Ready to test your understanding? Complete the AI-powered assessment to earn XP.
+              </p>
+              <Button className="w-full sm:w-auto min-w-[200px]" size="lg" onClick={handleMarkContentRead}>
+                Take Assessment
+                <MessageSquare className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
