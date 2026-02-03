@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, Upload, FileText, Video, Tag, Loader2, 
   Trash2, RefreshCw, CheckCircle, XCircle, Clock, Plus,
-  Youtube, FileVideo, Captions
+  Youtube, FileVideo, Captions, Files, X
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,6 +78,7 @@ const AdminKnowledge = () => {
   const [adminChecked, setAdminChecked] = useState(false);
   
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -87,6 +88,17 @@ const AdminKnowledge = () => {
   const [docDescription, setDocDescription] = useState("");
   const [docFile, setDocFile] = useState<File | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // Bulk upload states
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkSelectedTags, setBulkSelectedTags] = useState<string[]>([]);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState<{
+    current: number;
+    total: number;
+    currentFileName: string;
+    completed: string[];
+    failed: { name: string; error: string }[];
+  } | null>(null);
   
   const [videoTitle, setVideoTitle] = useState("");
   const [videoDescription, setVideoDescription] = useState("");
@@ -418,6 +430,123 @@ const AdminKnowledge = () => {
     setVideoInputType("url");
   };
 
+  const resetBulkForm = () => {
+    setBulkFiles([]);
+    setBulkSelectedTags([]);
+    setBulkUploadProgress(null);
+  };
+
+  const handleBulkFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setBulkFiles(files);
+  };
+
+  const removeFileFromBulk = (index: number) => {
+    setBulkFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleBulkUpload = async () => {
+    if (!user || bulkFiles.length === 0) return;
+    
+    setUploading(true);
+    setBulkUploadProgress({
+      current: 0,
+      total: bulkFiles.length,
+      currentFileName: bulkFiles[0].name,
+      completed: [],
+      failed: [],
+    });
+
+    const completed: string[] = [];
+    const failed: { name: string; error: string }[] = [];
+
+    for (let i = 0; i < bulkFiles.length; i++) {
+      const file = bulkFiles[i];
+      setBulkUploadProgress(prev => prev ? {
+        ...prev,
+        current: i + 1,
+        currentFileName: file.name,
+      } : null);
+
+      try {
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${user.id}/${Date.now()}-${i}.${fileExt}`;
+        
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('knowledge-documents')
+          .upload(filePath, file);
+        
+        if (uploadError) throw uploadError;
+        
+        // Use filename as title (without extension)
+        const title = file.name.replace(/\.[^/.]+$/, "");
+        
+        // Create document record
+        const { data: doc, error: insertError } = await supabase
+          .from('knowledge_documents')
+          .insert({
+            title,
+            description: null,
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            storage_path: filePath,
+            uploaded_by: user.id,
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        
+        // Add tags if selected
+        if (bulkSelectedTags.length > 0) {
+          const tagInserts = bulkSelectedTags.map(tagId => ({
+            document_id: doc.id,
+            tag_id: tagId,
+          }));
+          await supabase.from('knowledge_document_tags').insert(tagInserts);
+        }
+        
+        // Trigger processing (don't await - let it run in background)
+        supabase.functions.invoke('process-document', {
+          body: { documentId: doc.id },
+        });
+        
+        completed.push(file.name);
+        setBulkUploadProgress(prev => prev ? { ...prev, completed: [...completed] } : null);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        failed.push({ name: file.name, error: errorMessage });
+        setBulkUploadProgress(prev => prev ? { ...prev, failed: [...failed] } : null);
+      }
+    }
+
+    setUploading(false);
+    queryClient.invalidateQueries({ queryKey: ['knowledge-documents'] });
+    
+    if (failed.length === 0) {
+      toast({ 
+        title: "All documents uploaded", 
+        description: `${completed.length} files uploaded successfully.` 
+      });
+      setBulkUploadDialogOpen(false);
+      resetBulkForm();
+    } else if (completed.length > 0) {
+      toast({ 
+        title: "Partial upload complete", 
+        description: `${completed.length} succeeded, ${failed.length} failed.`,
+        variant: "destructive"
+      });
+    } else {
+      toast({ 
+        title: "Upload failed", 
+        description: `All ${failed.length} files failed to upload.`,
+        variant: "destructive"
+      });
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -685,6 +814,169 @@ const AdminKnowledge = () => {
                       )}
                       Upload & Process
                     </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={bulkUploadDialogOpen} onOpenChange={(open) => {
+                if (!uploading) {
+                  setBulkUploadDialogOpen(open);
+                  if (!open) resetBulkForm();
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                    <Files className="w-4 h-4 mr-2" />
+                    Bulk Upload
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Bulk Upload Documents</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    {!bulkUploadProgress ? (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Select Files (PDF, DOCX, TXT)</Label>
+                          <Input 
+                            type="file"
+                            accept=".pdf,.docx,.doc,.txt"
+                            multiple
+                            onChange={handleBulkFileSelect}
+                            className="cursor-pointer"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            File names will be used as document titles
+                          </p>
+                        </div>
+                        
+                        {bulkFiles.length > 0 && (
+                          <div className="space-y-2">
+                            <Label>Selected Files ({bulkFiles.length})</Label>
+                            <div className="max-h-40 overflow-y-auto space-y-1 rounded-md border border-border p-2">
+                              {bulkFiles.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between gap-2 text-sm py-1">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                                    <span className="truncate">{file.name}</span>
+                                    <span className="text-muted-foreground shrink-0">
+                                      ({formatFileSize(file.size)})
+                                    </span>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={() => removeFileFromBulk(index)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-2">
+                          <Label>Apply Tags to All</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {tags.map(tag => (
+                              <Badge 
+                                key={tag.id}
+                                variant={bulkSelectedTags.includes(tag.id) ? "default" : "outline"}
+                                className="cursor-pointer transition-colors"
+                                style={{ 
+                                  backgroundColor: bulkSelectedTags.includes(tag.id) ? tag.color : 'transparent',
+                                  borderColor: tag.color,
+                                  color: bulkSelectedTags.includes(tag.id) ? '#fff' : tag.color,
+                                }}
+                                onClick={() => {
+                                  setBulkSelectedTags(prev => 
+                                    prev.includes(tag.id) 
+                                      ? prev.filter(id => id !== tag.id)
+                                      : [...prev, tag.id]
+                                  );
+                                }}
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                            {tags.length === 0 && (
+                              <p className="text-sm text-muted-foreground">No tags available</p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          className="w-full" 
+                          onClick={handleBulkUpload}
+                          disabled={bulkFiles.length === 0 || uploading}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload {bulkFiles.length} Document{bulkFiles.length !== 1 ? 's' : ''}
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Uploading...</span>
+                            <span>{bulkUploadProgress.current} / {bulkUploadProgress.total}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-primary h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${(bulkUploadProgress.current / bulkUploadProgress.total) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">
+                            Current: {bulkUploadProgress.currentFileName}
+                          </p>
+                        </div>
+                        
+                        {bulkUploadProgress.completed.length > 0 && (
+                          <div className="space-y-1">
+                            <Label className="text-green-400">Completed ({bulkUploadProgress.completed.length})</Label>
+                            <div className="max-h-20 overflow-y-auto text-sm space-y-1">
+                              {bulkUploadProgress.completed.map((name, i) => (
+                                <div key={i} className="flex items-center gap-2 text-green-400">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span className="truncate">{name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {bulkUploadProgress.failed.length > 0 && (
+                          <div className="space-y-1">
+                            <Label className="text-destructive">Failed ({bulkUploadProgress.failed.length})</Label>
+                            <div className="max-h-20 overflow-y-auto text-sm space-y-1">
+                              {bulkUploadProgress.failed.map((item, i) => (
+                                <div key={i} className="flex items-center gap-2 text-destructive">
+                                  <XCircle className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{item.name}: {item.error}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {!uploading && (
+                          <Button 
+                            className="w-full" 
+                            variant="outline"
+                            onClick={() => {
+                              setBulkUploadDialogOpen(false);
+                              resetBulkForm();
+                            }}
+                          >
+                            Close
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
