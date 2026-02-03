@@ -21,7 +21,8 @@ import {
   Newspaper,
   HelpCircle,
   Briefcase,
-  GraduationCap
+  GraduationCap,
+  Database
 } from 'lucide-react';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { DailyChallenge } from '@/components/DailyChallenge';
@@ -242,15 +243,26 @@ const Dashboard = () => {
               <span className="hidden sm:inline">Topics</span>
             </Button>
             {isAdmin && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate('/admin/reviews')}
-                className="gap-2"
-              >
-                <Shield className="w-4 h-4" />
-                <span className="hidden sm:inline">Admin</span>
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/admin/reviews')}
+                  className="gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate('/admin/knowledge')}
+                  className="gap-2"
+                >
+                  <Database className="w-4 h-4" />
+                  <span className="hidden sm:inline">Knowledge</span>
+                </Button>
+              </>
             )}
             <Button 
               variant="outline" 

@@ -22,6 +22,7 @@ import Documentation from "./pages/Documentation";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import ModuleView from "./pages/ModuleView";
+import AdminKnowledge from "./pages/AdminKnowledge";
 
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin/reviews" element={<AdminReviews />} />
             <Route path="/admin/support" element={<AdminSupport />} />
+            <Route path="/admin/knowledge" element={<AdminKnowledge />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/security-topics" element={<SecurityTopics />} />
             <Route path="/blog" element={<Blog />} />

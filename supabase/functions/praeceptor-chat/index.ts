@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,7 +77,14 @@ You have access to the full conversation history in this session. **Use it activ
 - Track their progress and knowledge revealed
 
 ## KNOWLEDGE SCOPE
-All cybersecurity domains: networking, programming, web/mobile/cloud/IoT, crypto, malware analysis (educational), red team/blue team, incident response, threat modeling, certifications, and career guidance. Both offensive and defensive — taught ethically.`;
+All cybersecurity domains: networking, programming, web/mobile/cloud/IoT, crypto, malware analysis (educational), red team/blue team, incident response, threat modeling, certifications, and career guidance. Both offensive and defensive — taught ethically.
+
+## KNOWLEDGE BASE CONTEXT
+When relevant context from the knowledge base is provided, you MUST:
+- **Prioritize this information** over your general knowledge
+- Reference the specific materials when applicable
+- If the context directly answers the user's question, use it as your primary source
+- If context is partial, supplement with your knowledge but acknowledge the source`;
 
 const TRACK_PROMPTS: Record<string, string> = {
   learning: `${PRAECEPTOR_BASE_PROMPT}
@@ -165,6 +173,62 @@ You're a career coach helping them break into or advance in cybersecurity.
 Goal: They feel prepared and competitive in the job market.`
 };
 
+// Generate embedding for similarity search
+function generateEmbedding(text: string): number[] {
+  const embedding = new Array(1536).fill(0);
+  const keywords = text.toLowerCase().split(/\s+/).slice(0, 100);
+  
+  for (let i = 0; i < keywords.length; i++) {
+    const word = keywords[i];
+    for (let j = 0; j < word.length; j++) {
+      const idx = (word.charCodeAt(j) * (i + 1) * (j + 1)) % 1536;
+      embedding[idx] += 0.1;
+    }
+  }
+  
+  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+  if (magnitude > 0) {
+    for (let i = 0; i < embedding.length; i++) {
+      embedding[i] /= magnitude;
+    }
+  }
+  
+  return embedding;
+}
+
+// Search knowledge base for relevant context
+async function searchKnowledgeBase(query: string, supabase: any): Promise<string | null> {
+  try {
+    const queryEmbedding = generateEmbedding(query);
+    
+    const { data: chunks, error } = await supabase.rpc('search_knowledge_base', {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.3,
+      match_count: 3
+    });
+    
+    if (error) {
+      console.error("Knowledge base search error:", error);
+      return null;
+    }
+    
+    if (!chunks || chunks.length === 0) {
+      return null;
+    }
+    
+    // Format the context
+    const context = chunks.map((chunk: any, index: number) => {
+      const source = chunk.metadata?.title || 'Knowledge Base';
+      return `[Source ${index + 1}: ${source}]\n${chunk.content}`;
+    }).join('\n\n---\n\n');
+    
+    return context;
+  } catch (error) {
+    console.error("Error searching knowledge base:", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -181,7 +245,21 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = TRACK_PROMPTS[track] || TRACK_PROMPTS.learning;
+    // Initialize Supabase client for knowledge base search
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Search knowledge base for relevant context
+    const knowledgeContext = await searchKnowledgeBase(message, supabase);
+
+    let systemPrompt = TRACK_PROMPTS[track] || TRACK_PROMPTS.learning;
+    
+    // Add knowledge base context if found
+    if (knowledgeContext) {
+      systemPrompt += `\n\n## RELEVANT KNOWLEDGE BASE CONTENT\nThe following content from our curated learning materials is relevant to the user's question. Prioritize this information in your response:\n\n${knowledgeContext}`;
+      console.log("Found relevant knowledge base context");
+    }
 
     console.log(`Processing message for track: ${track}, conversationId: ${conversationId}, history: ${history.length} messages, streaming: ${stream}`);
 

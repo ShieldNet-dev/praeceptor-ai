@@ -238,6 +238,219 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_chunks: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          metadata: Json | null
+          source_id: string
+          source_type: Database["public"]["Enums"]["knowledge_source_type"]
+        }
+        Insert: {
+          chunk_index: number
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id: string
+          source_type: Database["public"]["Enums"]["knowledge_source_type"]
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json | null
+          source_id?: string
+          source_type?: Database["public"]["Enums"]["knowledge_source_type"]
+        }
+        Relationships: []
+      }
+      knowledge_document_tags: {
+        Row: {
+          document_id: string
+          tag_id: string
+        }
+        Insert: {
+          document_id: string
+          tag_id: string
+        }
+        Update: {
+          document_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_document_tags_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_document_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_documents: {
+        Row: {
+          chunk_count: number | null
+          created_at: string
+          description: string | null
+          error_message: string | null
+          file_name: string
+          file_size: number
+          file_type: string
+          id: string
+          status: Database["public"]["Enums"]["processing_status"]
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          chunk_count?: number | null
+          created_at?: string
+          description?: string | null
+          error_message?: string | null
+          file_name: string
+          file_size: number
+          file_type: string
+          id?: string
+          status?: Database["public"]["Enums"]["processing_status"]
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          chunk_count?: number | null
+          created_at?: string
+          description?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          status?: Database["public"]["Enums"]["processing_status"]
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
+      knowledge_tags: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      knowledge_video_tags: {
+        Row: {
+          tag_id: string
+          video_id: string
+        }
+        Insert: {
+          tag_id: string
+          video_id: string
+        }
+        Update: {
+          tag_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_video_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_video_tags_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_videos: {
+        Row: {
+          caption_file_name: string | null
+          caption_file_path: string | null
+          chunk_count: number | null
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          platform: string | null
+          status: Database["public"]["Enums"]["processing_status"]
+          title: string
+          updated_at: string
+          uploaded_by: string
+          video_url: string | null
+        }
+        Insert: {
+          caption_file_name?: string | null
+          caption_file_path?: string | null
+          chunk_count?: number | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          platform?: string | null
+          status?: Database["public"]["Enums"]["processing_status"]
+          title: string
+          updated_at?: string
+          uploaded_by: string
+          video_url?: string | null
+        }
+        Update: {
+          caption_file_name?: string | null
+          caption_file_path?: string | null
+          chunk_count?: number | null
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          platform?: string | null
+          status?: Database["public"]["Enums"]["processing_status"]
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -612,6 +825,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      search_knowledge_base: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          metadata: Json
+          similarity: number
+          source_id: string
+          source_type: Database["public"]["Enums"]["knowledge_source_type"]
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
@@ -622,6 +850,8 @@ export type Database = {
         | "siwes"
         | "academic"
         | "career"
+      knowledge_source_type: "document" | "video"
+      processing_status: "pending" | "processing" | "completed" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -758,6 +988,8 @@ export const Constants = {
         "academic",
         "career",
       ],
+      knowledge_source_type: ["document", "video"],
+      processing_status: ["pending", "processing", "completed", "failed"],
     },
   },
 } as const
