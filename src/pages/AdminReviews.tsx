@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Table,
   TableBody,
@@ -17,14 +16,15 @@ import {
   AlertTriangle,
   MessageSquare,
   TrendingUp,
-  Send,
-  X
+  Eye,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
+import ReviewDetailDialog from '@/components/admin/ReviewDetailDialog';
 
 interface Review {
   id: string;
@@ -43,55 +43,22 @@ const AdminReviews = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState({ total: 0, avgRating: 0, ratingCounts: [0, 0, 0, 0, 0] });
-  const [feedbackText, setFeedbackText] = useState<{ [key: string]: string }>({});
-  const [editingFeedback, setEditingFeedback] = useState<string | null>(null);
-  const [submittingFeedback, setSubmittingFeedback] = useState<string | null>(null);
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmitFeedback = async (reviewId: string) => {
-    const feedback = feedbackText[reviewId]?.trim();
-    if (!feedback) {
-      toast.error('Please enter feedback before submitting');
-      return;
-    }
-
-    setSubmittingFeedback(reviewId);
-    try {
-      const { error } = await supabase
-        .from('app_reviews')
-        .update({
-          admin_feedback: feedback,
-          admin_feedback_at: new Date().toISOString()
-        })
-        .eq('id', reviewId);
-
-      if (error) throw error;
-
-      // Update local state
-      setReviews(prev => prev.map(r => 
-        r.id === reviewId 
-          ? { ...r, admin_feedback: feedback, admin_feedback_at: new Date().toISOString() }
-          : r
-      ));
-      setEditingFeedback(null);
-      setFeedbackText(prev => ({ ...prev, [reviewId]: '' }));
-      toast.success('Feedback submitted successfully');
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
-      toast.error('Failed to submit feedback');
-    } finally {
-      setSubmittingFeedback(null);
-    }
+  const handleReviewClick = (review: Review) => {
+    setSelectedReview(review);
+    setDialogOpen(true);
   };
 
-  const handleStartEditing = (reviewId: string, existingFeedback?: string | null) => {
-    setEditingFeedback(reviewId);
-    setFeedbackText(prev => ({ ...prev, [reviewId]: existingFeedback || '' }));
-  };
-
-  const handleCancelEditing = () => {
-    setEditingFeedback(null);
+  const handleFeedbackSent = (reviewId: string, feedback: string) => {
+    setReviews(prev => prev.map(r => 
+      r.id === reviewId 
+        ? { ...r, admin_feedback: feedback, admin_feedback_at: new Date().toISOString() }
+        : r
+    ));
   };
 
   useEffect(() => {
@@ -296,14 +263,19 @@ const AdminReviews = () => {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Rating</TableHead>
-                    <TableHead className="min-w-[250px]">Review</TableHead>
-                    <TableHead className="min-w-[300px]">Admin Feedback</TableHead>
+                    <TableHead className="min-w-[200px]">Review</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reviews.map((review) => (
-                    <TableRow key={review.id}>
+                    <TableRow 
+                      key={review.id}
+                      className="cursor-pointer hover:bg-secondary/50 transition-colors"
+                      onClick={() => handleReviewClick(review)}
+                    >
                       <TableCell className="font-medium">
                         {review.user_email}
                       </TableCell>
@@ -321,72 +293,36 @@ const AdminReviews = () => {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[250px]">
-                        <p className="line-clamp-3">{review.review_text}</p>
+                      <TableCell className="max-w-[200px]">
+                        <p className="line-clamp-2 text-sm">{review.review_text}</p>
                       </TableCell>
-                      <TableCell className="max-w-[300px]">
-                        {editingFeedback === review.id ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={feedbackText[review.id] || ''}
-                              onChange={(e) => setFeedbackText(prev => ({ ...prev, [review.id]: e.target.value }))}
-                              placeholder="Write your feedback to the user..."
-                              className="min-h-[80px] text-sm"
-                              disabled={submittingFeedback === review.id}
-                            />
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleSubmitFeedback(review.id)}
-                                disabled={submittingFeedback === review.id}
-                              >
-                                {submittingFeedback === review.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Send className="w-4 h-4" />
-                                )}
-                                <span className="ml-1">Send</span>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={handleCancelEditing}
-                                disabled={submittingFeedback === review.id}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ) : review.admin_feedback ? (
-                          <div className="space-y-1">
-                            <p className="text-sm line-clamp-3">{review.admin_feedback}</p>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-muted-foreground">
-                                {review.admin_feedback_at && format(new Date(review.admin_feedback_at), 'MMM d, yyyy')}
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-xs"
-                                onClick={() => handleStartEditing(review.id, review.admin_feedback)}
-                              >
-                                Edit
-                              </Button>
-                            </div>
-                          </div>
+                      <TableCell>
+                        {review.admin_feedback ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/20 text-emerald-500">
+                            <CheckCircle className="w-3 h-3" />
+                            Responded
+                          </span>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStartEditing(review.id)}
-                          >
-                            <MessageSquare className="w-4 h-4 mr-1" />
-                            Add Feedback
-                          </Button>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-500">
+                            Pending
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-sm">
                         {format(new Date(review.created_at), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReviewClick(review);
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -395,6 +331,14 @@ const AdminReviews = () => {
             </div>
           )}
         </div>
+
+        {/* Review Detail Dialog */}
+        <ReviewDetailDialog
+          review={selectedReview}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onFeedbackSent={handleFeedbackSent}
+        />
       </main>
     </div>
   );

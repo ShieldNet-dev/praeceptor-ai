@@ -59,7 +59,13 @@ const Settings = () => {
   const [mfaEnrolling, setMfaEnrolling] = useState(false);
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
-  const [existingReview, setExistingReview] = useState<{ id: string; rating: number; review_text: string } | null>(null);
+  const [existingReview, setExistingReview] = useState<{ 
+    id: string; 
+    rating: number; 
+    review_text: string;
+    admin_feedback?: string | null;
+    admin_feedback_at?: string | null;
+  } | null>(null);
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -97,10 +103,10 @@ const Settings = () => {
           setSelectedTracks(tracks);
         }
 
-        // Fetch existing review
+        // Fetch existing review with admin feedback
         const { data: reviewData } = await supabase
           .from('app_reviews')
-          .select('id, rating, review_text')
+          .select('id, rating, review_text, admin_feedback, admin_feedback_at')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -789,6 +795,34 @@ const Settings = () => {
 
           {/* Feedback Tab */}
           <TabsContent value="feedback" className="space-y-6">
+            {/* Admin Feedback Card - Show if there's admin feedback */}
+            {existingReview?.admin_feedback && (
+              <div className="glass rounded-xl p-6 border-2 border-primary/50">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-full bg-primary/20 shrink-0">
+                    <MessageSquare className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-primary">Response from Praeceptor Team</h3>
+                      {existingReview.admin_feedback_at && (
+                        <span className="text-xs text-muted-foreground">
+                          • {new Date(existingReview.admin_feedback_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {existingReview.admin_feedback}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="glass rounded-xl p-6 cyber-border">
               <h2 className="text-lg font-semibold mb-2">App Review & Feedback</h2>
               <p className="text-sm text-muted-foreground mb-6">
@@ -837,9 +871,14 @@ const Settings = () => {
                 {existingReview ? 'Update Review' : 'Submit Review'}
               </Button>
 
-              {existingReview && (
+              {existingReview && !existingReview.admin_feedback && (
                 <p className="text-sm text-muted-foreground mt-3">
                   You've already submitted a review. You can update it anytime.
+                </p>
+              )}
+              {existingReview?.admin_feedback && (
+                <p className="text-sm text-primary/80 mt-3">
+                  Thank you for your feedback! The team has responded above.
                 </p>
               )}
             </div>
