@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ArrowLeft, Upload, FileText, Video, Tag, Loader2, 
   Trash2, RefreshCw, CheckCircle, XCircle, Clock, Plus,
-  Youtube, FileVideo, Captions, Files, X
+  Youtube, FileVideo, Captions, Files, X, AlertCircle
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -55,18 +57,32 @@ interface KnowledgeTag {
 
 const StatusBadge = ({ status }: { status: ProcessingStatus }) => {
   const config = {
-    pending: { icon: Clock, className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-    processing: { icon: Loader2, className: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-    completed: { icon: CheckCircle, className: "bg-green-500/20 text-green-400 border-green-500/30" },
-    failed: { icon: XCircle, className: "bg-destructive/20 text-destructive border-destructive/30" },
+    pending: { icon: Clock, label: "Pending", className: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+    processing: { icon: Loader2, label: "Processing", className: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+    completed: { icon: CheckCircle, label: "Completed", className: "bg-green-500/10 text-green-500 border-green-500/20" },
+    failed: { icon: XCircle, label: "Failed", className: "bg-destructive/10 text-destructive border-destructive/20" },
   };
-  const { icon: Icon, className } = config[status];
+  const { icon: Icon, label, className } = config[status];
   return (
-    <Badge variant="outline" className={className}>
-      <Icon className={`w-3 h-3 mr-1 ${status === 'processing' ? 'animate-spin' : ''}`} />
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+    <Badge variant="outline" className={`text-xs font-medium ${className}`}>
+      <Icon className={`w-3 h-3 mr-1.5 ${status === 'processing' ? 'animate-spin' : ''}`} />
+      {label}
     </Badge>
   );
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 };
 
 const AdminKnowledge = () => {
@@ -174,14 +190,12 @@ const AdminKnowledge = () => {
       const fileExt = docFile.name.split('.').pop();
       const filePath = `${user.id}/${Date.now()}.${fileExt}`;
       
-      // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('knowledge-documents')
         .upload(filePath, docFile);
       
       if (uploadError) throw uploadError;
       
-      // Create document record
       const { data: doc, error: insertError } = await supabase
         .from('knowledge_documents')
         .insert({
@@ -198,7 +212,6 @@ const AdminKnowledge = () => {
       
       if (insertError) throw insertError;
       
-      // Add tags if selected
       if (selectedTags.length > 0) {
         const tagInserts = selectedTags.map(tagId => ({
           document_id: doc.id,
@@ -207,7 +220,6 @@ const AdminKnowledge = () => {
         await supabase.from('knowledge_document_tags').insert(tagInserts);
       }
       
-      // Trigger processing
       await supabase.functions.invoke('process-document', {
         body: { documentId: doc.id },
       });
@@ -234,7 +246,6 @@ const AdminKnowledge = () => {
       setUploading(true);
       let captionPath = null;
       
-      // Upload caption file if provided
       if (captionFile) {
         const fileExt = captionFile.name.split('.').pop();
         captionPath = `${user.id}/${Date.now()}.${fileExt}`;
@@ -246,7 +257,6 @@ const AdminKnowledge = () => {
         if (uploadError) throw uploadError;
       }
       
-      // Detect platform from URL
       let platform = null;
       if (videoUrl) {
         if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
@@ -256,7 +266,6 @@ const AdminKnowledge = () => {
         }
       }
       
-      // Create video record
       const { data: video, error: insertError } = await supabase
         .from('knowledge_videos')
         .insert({
@@ -273,7 +282,6 @@ const AdminKnowledge = () => {
       
       if (insertError) throw insertError;
       
-      // Trigger processing
       await supabase.functions.invoke('process-video', {
         body: { videoId: video.id },
       });
@@ -318,14 +326,12 @@ const AdminKnowledge = () => {
   // Delete document mutation
   const deleteDocumentMutation = useMutation({
     mutationFn: async (docId: string) => {
-      // Delete chunks first
       await supabase
         .from('knowledge_chunks')
         .delete()
         .eq('source_type', 'document')
         .eq('source_id', docId);
       
-      // Get storage path
       const { data: doc } = await supabase
         .from('knowledge_documents')
         .select('storage_path')
@@ -336,7 +342,6 @@ const AdminKnowledge = () => {
         await supabase.storage.from('knowledge-documents').remove([doc.storage_path]);
       }
       
-      // Delete document record
       const { error } = await supabase
         .from('knowledge_documents')
         .delete()
@@ -355,14 +360,12 @@ const AdminKnowledge = () => {
   // Delete video mutation
   const deleteVideoMutation = useMutation({
     mutationFn: async (videoId: string) => {
-      // Delete chunks first
       await supabase
         .from('knowledge_chunks')
         .delete()
         .eq('source_type', 'video')
         .eq('source_id', videoId);
       
-      // Get caption path
       const { data: video } = await supabase
         .from('knowledge_videos')
         .select('caption_file_path')
@@ -373,7 +376,6 @@ const AdminKnowledge = () => {
         await supabase.storage.from('knowledge-captions').remove([video.caption_file_path]);
       }
       
-      // Delete video record
       const { error } = await supabase
         .from('knowledge_videos')
         .delete()
@@ -395,7 +397,6 @@ const AdminKnowledge = () => {
       const endpoint = type === 'document' ? 'process-document' : 'process-video';
       const body = type === 'document' ? { documentId: id } : { videoId: id };
       
-      // Update status to pending
       const table = type === 'document' ? 'knowledge_documents' : 'knowledge_videos';
       await supabase
         .from(table)
@@ -472,17 +473,14 @@ const AdminKnowledge = () => {
         const fileExt = file.name.split('.').pop();
         const filePath = `${user.id}/${Date.now()}-${i}.${fileExt}`;
         
-        // Upload to storage
         const { error: uploadError } = await supabase.storage
           .from('knowledge-documents')
           .upload(filePath, file);
         
         if (uploadError) throw uploadError;
         
-        // Use filename as title (without extension)
         const title = file.name.replace(/\.[^/.]+$/, "");
         
-        // Create document record
         const { data: doc, error: insertError } = await supabase
           .from('knowledge_documents')
           .insert({
@@ -499,7 +497,6 @@ const AdminKnowledge = () => {
         
         if (insertError) throw insertError;
         
-        // Add tags if selected
         if (bulkSelectedTags.length > 0) {
           const tagInserts = bulkSelectedTags.map(tagId => ({
             document_id: doc.id,
@@ -508,7 +505,6 @@ const AdminKnowledge = () => {
           await supabase.from('knowledge_document_tags').insert(tagInserts);
         }
         
-        // Trigger processing (don't await - let it run in background)
         supabase.functions.invoke('process-document', {
           body: { documentId: doc.id },
         });
@@ -547,12 +543,6 @@ const AdminKnowledge = () => {
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
   if (authLoading || !adminChecked) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -566,180 +556,175 @@ const AdminKnowledge = () => {
     return null;
   }
 
+  const progressPercentage = bulkUploadProgress 
+    ? (bulkUploadProgress.current / bulkUploadProgress.total) * 100 
+    : 0;
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/dashboard')}
-              className="shrink-0"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Knowledge Base</h1>
-              <p className="text-sm text-muted-foreground">Manage learning materials for RAG</p>
-            </div>
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/dashboard')}
+            className="shrink-0 h-10 w-10"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-foreground">Knowledge Base</h1>
+            <p className="text-sm text-muted-foreground">Manage RAG learning materials</p>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Tag className="w-4 h-4 mr-2" />
-                  Manage Tags
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Tag</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label>Tag Name</Label>
+          <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="hidden sm:flex">
+                <Tag className="w-4 h-4 mr-2" />
+                Tags
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Tag</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Tag Name</Label>
+                  <Input 
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="e.g., Network Security"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Color</Label>
+                  <div className="flex gap-2">
                     <Input 
-                      value={newTagName}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                      placeholder="e.g., Network Security"
+                      type="color"
+                      value={newTagColor}
+                      onChange={(e) => setNewTagColor(e.target.value)}
+                      className="w-14 h-10 p-1 cursor-pointer"
+                    />
+                    <Input 
+                      value={newTagColor}
+                      onChange={(e) => setNewTagColor(e.target.value)}
+                      className="flex-1 font-mono"
                     />
                   </div>
+                </div>
+                {tags.length > 0 && (
                   <div className="space-y-2">
-                    <Label>Color</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        type="color"
-                        value={newTagColor}
-                        onChange={(e) => setNewTagColor(e.target.value)}
-                        className="w-16 h-10 p-1"
-                      />
-                      <Input 
-                        value={newTagColor}
-                        onChange={(e) => setNewTagColor(e.target.value)}
-                        className="flex-1"
-                      />
+                    <Label className="text-muted-foreground">Existing tags</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {tags.map(tag => (
+                        <Badge 
+                          key={tag.id} 
+                          style={{ backgroundColor: tag.color + '20', borderColor: tag.color, color: tag.color }}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {tag.name}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <p className="text-sm text-muted-foreground w-full mb-2">Existing tags:</p>
-                    {tags.map(tag => (
-                      <Badge 
-                        key={tag.id} 
-                        style={{ backgroundColor: tag.color + '30', borderColor: tag.color }}
-                        variant="outline"
-                      >
-                        {tag.name}
-                      </Badge>
-                    ))}
-                    {tags.length === 0 && (
-                      <p className="text-sm text-muted-foreground">No tags yet</p>
-                    )}
-                  </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => createTagMutation.mutate()}
-                    disabled={!newTagName.trim() || createTagMutation.isPending}
-                  >
-                    {createTagMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Plus className="w-4 h-4 mr-2" />
-                    )}
-                    Create Tag
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+                )}
+                <Button 
+                  className="w-full" 
+                  onClick={() => createTagMutation.mutate()}
+                  disabled={!newTagName.trim() || createTagMutation.isPending}
+                >
+                  {createTagMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Plus className="w-4 h-4 mr-2" />
+                  )}
+                  Create Tag
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <Card className="bg-card/50 border-border/50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/20">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{documents.length}</p>
-                  <p className="text-xs text-muted-foreground">Documents</p>
-                </div>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10">
+                <FileText className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{documents.length}</p>
+                <p className="text-xs text-muted-foreground">Documents</p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-border/50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-secondary/40">
-                  <Video className="w-5 h-5 text-secondary-foreground" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{videos.length}</p>
-                  <p className="text-xs text-muted-foreground">Videos</p>
-                </div>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-secondary/20">
+                <Video className="w-5 h-5 text-secondary-foreground" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{videos.length}</p>
+                <p className="text-xs text-muted-foreground">Videos</p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-border/50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/20">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {documents.filter(d => d.status === 'completed').length + 
-                     videos.filter(v => v.status === 'completed').length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Processed</p>
-                </div>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-green-500/10">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">
+                  {documents.filter(d => d.status === 'completed').length + 
+                   videos.filter(v => v.status === 'completed').length}
+                </p>
+                <p className="text-xs text-muted-foreground">Processed</p>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-card/50 border-border/50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/20">
-                  <Tag className="w-5 h-5 text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{tags.length}</p>
-                  <p className="text-xs text-muted-foreground">Tags</p>
-                </div>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-purple-500/10">
+                <Tag className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{tags.length}</p>
+                <p className="text-xs text-muted-foreground">Tags</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="documents" className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="documents" className="flex-1 sm:flex-none">
-                <FileText className="w-4 h-4 mr-2" />
-                Documents
+        {/* Main Tabs */}
+        <Tabs defaultValue="documents" className="space-y-6">
+          <div className="flex flex-col gap-4">
+            <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+              <TabsTrigger value="documents" className="gap-2">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Documents</span>
+                <span className="sm:hidden">Docs</span>
               </TabsTrigger>
-              <TabsTrigger value="videos" className="flex-1 sm:flex-none">
-                <Video className="w-4 h-4 mr-2" />
+              <TabsTrigger value="videos" className="gap-2">
+                <Video className="w-4 h-4" />
                 Videos
               </TabsTrigger>
             </TabsList>
             
-            <div className="flex gap-2">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
               <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="flex-1 sm:flex-none">
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Document
+                    Upload
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="max-w-lg mx-4 sm:mx-auto">
                   <DialogHeader>
-                    <DialogTitle>Upload Learning Material</DialogTitle>
+                    <DialogTitle>Upload Document</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div className="space-y-2">
@@ -755,8 +740,8 @@ const AdminKnowledge = () => {
                       <Textarea 
                         value={docDescription}
                         onChange={(e) => setDocDescription(e.target.value)}
-                        placeholder="Brief description of the content..."
-                        rows={3}
+                        placeholder="Brief description..."
+                        rows={2}
                       />
                     </div>
                     <div className="space-y-2">
@@ -768,40 +753,39 @@ const AdminKnowledge = () => {
                         className="cursor-pointer"
                       />
                       {docFile && (
-                        <p className="text-sm text-muted-foreground">
-                          Selected: {docFile.name} ({formatFileSize(docFile.size)})
+                        <p className="text-xs text-muted-foreground">
+                          {docFile.name} ({formatFileSize(docFile.size)})
                         </p>
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <Label>Tags</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map(tag => (
-                          <Badge 
-                            key={tag.id}
-                            variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-                            className="cursor-pointer transition-colors"
-                            style={{ 
-                              backgroundColor: selectedTags.includes(tag.id) ? tag.color : 'transparent',
-                              borderColor: tag.color,
-                              color: selectedTags.includes(tag.id) ? '#fff' : tag.color,
-                            }}
-                            onClick={() => {
-                              setSelectedTags(prev => 
-                                prev.includes(tag.id) 
-                                  ? prev.filter(id => id !== tag.id)
-                                  : [...prev, tag.id]
-                              );
-                            }}
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                        {tags.length === 0 && (
-                          <p className="text-sm text-muted-foreground">No tags available</p>
-                        )}
+                    {tags.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Tags</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {tags.map(tag => (
+                            <Badge 
+                              key={tag.id}
+                              variant={selectedTags.includes(tag.id) ? "default" : "outline"}
+                              className="cursor-pointer text-xs"
+                              style={{ 
+                                backgroundColor: selectedTags.includes(tag.id) ? tag.color : 'transparent',
+                                borderColor: tag.color,
+                                color: selectedTags.includes(tag.id) ? '#fff' : tag.color,
+                              }}
+                              onClick={() => {
+                                setSelectedTags(prev => 
+                                  prev.includes(tag.id) 
+                                    ? prev.filter(id => id !== tag.id)
+                                    : [...prev, tag.id]
+                                );
+                              }}
+                            >
+                              {tag.name}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <Button 
                       className="w-full" 
                       onClick={() => uploadDocumentMutation.mutate()}
@@ -827,18 +811,18 @@ const AdminKnowledge = () => {
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                     <Files className="w-4 h-4 mr-2" />
-                    Bulk Upload
+                    Bulk
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="max-w-lg mx-4 sm:mx-auto">
                   <DialogHeader>
-                    <DialogTitle>Bulk Upload Documents</DialogTitle>
+                    <DialogTitle>Bulk Upload</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     {!bulkUploadProgress ? (
                       <>
                         <div className="space-y-2">
-                          <Label>Select Files (PDF, DOCX, TXT)</Label>
+                          <Label>Select Files</Label>
                           <Input 
                             type="file"
                             accept=".pdf,.docx,.doc,.txt"
@@ -847,66 +831,72 @@ const AdminKnowledge = () => {
                             className="cursor-pointer"
                           />
                           <p className="text-xs text-muted-foreground">
-                            File names will be used as document titles
+                            Supports PDF, DOCX, TXT • Filenames become titles
                           </p>
                         </div>
                         
                         {bulkFiles.length > 0 && (
                           <div className="space-y-2">
-                            <Label>Selected Files ({bulkFiles.length})</Label>
-                            <div className="max-h-40 overflow-y-auto space-y-1 rounded-md border border-border p-2">
-                              {bulkFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between gap-2 text-sm py-1">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                                    <span className="truncate">{file.name}</span>
-                                    <span className="text-muted-foreground shrink-0">
-                                      ({formatFileSize(file.size)})
-                                    </span>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 shrink-0"
-                                    onClick={() => removeFileFromBulk(index)}
+                            <Label>Selected ({bulkFiles.length})</Label>
+                            <ScrollArea className="h-32 rounded-lg border border-border bg-muted/30">
+                              <div className="p-2 space-y-1">
+                                {bulkFiles.map((file, index) => (
+                                  <div 
+                                    key={index} 
+                                    className="flex items-center justify-between gap-2 p-2 rounded-md bg-background/50"
                                   >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                                      <span className="text-sm truncate">{file.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatFileSize(file.size)}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                                        onClick={() => removeFileFromBulk(index)}
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        )}
+                        
+                        {tags.length > 0 && (
+                          <div className="space-y-2">
+                            <Label>Apply Tags to All</Label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {tags.map(tag => (
+                                <Badge 
+                                  key={tag.id}
+                                  variant={bulkSelectedTags.includes(tag.id) ? "default" : "outline"}
+                                  className="cursor-pointer text-xs"
+                                  style={{ 
+                                    backgroundColor: bulkSelectedTags.includes(tag.id) ? tag.color : 'transparent',
+                                    borderColor: tag.color,
+                                    color: bulkSelectedTags.includes(tag.id) ? '#fff' : tag.color,
+                                  }}
+                                  onClick={() => {
+                                    setBulkSelectedTags(prev => 
+                                      prev.includes(tag.id) 
+                                        ? prev.filter(id => id !== tag.id)
+                                        : [...prev, tag.id]
+                                    );
+                                  }}
+                                >
+                                  {tag.name}
+                                </Badge>
                               ))}
                             </div>
                           </div>
                         )}
-                        
-                        <div className="space-y-2">
-                          <Label>Apply Tags to All</Label>
-                          <div className="flex flex-wrap gap-2">
-                            {tags.map(tag => (
-                              <Badge 
-                                key={tag.id}
-                                variant={bulkSelectedTags.includes(tag.id) ? "default" : "outline"}
-                                className="cursor-pointer transition-colors"
-                                style={{ 
-                                  backgroundColor: bulkSelectedTags.includes(tag.id) ? tag.color : 'transparent',
-                                  borderColor: tag.color,
-                                  color: bulkSelectedTags.includes(tag.id) ? '#fff' : tag.color,
-                                }}
-                                onClick={() => {
-                                  setBulkSelectedTags(prev => 
-                                    prev.includes(tag.id) 
-                                      ? prev.filter(id => id !== tag.id)
-                                      : [...prev, tag.id]
-                                  );
-                                }}
-                              >
-                                {tag.name}
-                              </Badge>
-                            ))}
-                            {tags.length === 0 && (
-                              <p className="text-sm text-muted-foreground">No tags available</p>
-                            )}
-                          </div>
-                        </div>
                         
                         <Button 
                           className="w-full" 
@@ -914,52 +904,57 @@ const AdminKnowledge = () => {
                           disabled={bulkFiles.length === 0 || uploading}
                         >
                           <Upload className="w-4 h-4 mr-2" />
-                          Upload {bulkFiles.length} Document{bulkFiles.length !== 1 ? 's' : ''}
+                          Upload {bulkFiles.length} File{bulkFiles.length !== 1 ? 's' : ''}
                         </Button>
                       </>
                     ) : (
                       <div className="space-y-4">
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <div className="flex justify-between text-sm">
-                            <span>Uploading...</span>
-                            <span>{bulkUploadProgress.current} / {bulkUploadProgress.total}</span>
+                            <span className="font-medium">Uploading...</span>
+                            <span className="text-muted-foreground">
+                              {bulkUploadProgress.current} / {bulkUploadProgress.total}
+                            </span>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${(bulkUploadProgress.current / bulkUploadProgress.total) * 100}%` }}
-                            />
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            Current: {bulkUploadProgress.currentFileName}
+                          <Progress value={progressPercentage} className="h-2" />
+                          <p className="text-xs text-muted-foreground truncate">
+                            {bulkUploadProgress.currentFileName}
                           </p>
                         </div>
                         
                         {bulkUploadProgress.completed.length > 0 && (
-                          <div className="space-y-1">
-                            <Label className="text-green-400">Completed ({bulkUploadProgress.completed.length})</Label>
-                            <div className="max-h-20 overflow-y-auto text-sm space-y-1">
-                              {bulkUploadProgress.completed.map((name, i) => (
-                                <div key={i} className="flex items-center gap-2 text-green-400">
-                                  <CheckCircle className="w-3 h-3" />
-                                  <span className="truncate">{name}</span>
-                                </div>
-                              ))}
-                            </div>
+                          <div className="space-y-2">
+                            <Label className="text-green-500 text-xs">
+                              Completed ({bulkUploadProgress.completed.length})
+                            </Label>
+                            <ScrollArea className="h-20 rounded-md border border-green-500/20 bg-green-500/5">
+                              <div className="p-2 space-y-1">
+                                {bulkUploadProgress.completed.map((name, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-green-500">
+                                    <CheckCircle className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
                           </div>
                         )}
                         
                         {bulkUploadProgress.failed.length > 0 && (
-                          <div className="space-y-1">
-                            <Label className="text-destructive">Failed ({bulkUploadProgress.failed.length})</Label>
-                            <div className="max-h-20 overflow-y-auto text-sm space-y-1">
-                              {bulkUploadProgress.failed.map((item, i) => (
-                                <div key={i} className="flex items-center gap-2 text-destructive">
-                                  <XCircle className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">{item.name}: {item.error}</span>
-                                </div>
-                              ))}
-                            </div>
+                          <div className="space-y-2">
+                            <Label className="text-destructive text-xs">
+                              Failed ({bulkUploadProgress.failed.length})
+                            </Label>
+                            <ScrollArea className="h-20 rounded-md border border-destructive/20 bg-destructive/5">
+                              <div className="p-2 space-y-1">
+                                {bulkUploadProgress.failed.map((item, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-destructive">
+                                    <XCircle className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{item.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
                           </div>
                         )}
                         
@@ -985,12 +980,12 @@ const AdminKnowledge = () => {
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
                     <Video className="w-4 h-4 mr-2" />
-                    Add Video
+                    Video
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="max-w-lg mx-4 sm:mx-auto">
                   <DialogHeader>
-                    <DialogTitle>Add Video Learning Source</DialogTitle>
+                    <DialogTitle>Add Video</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div className="space-y-2">
@@ -1006,8 +1001,8 @@ const AdminKnowledge = () => {
                       <Textarea 
                         value={videoDescription}
                         onChange={(e) => setVideoDescription(e.target.value)}
-                        placeholder="Brief description of the video content..."
-                        rows={3}
+                        placeholder="Brief description..."
+                        rows={2}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1018,15 +1013,15 @@ const AdminKnowledge = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="url">
-                            <div className="flex items-center">
-                              <Youtube className="w-4 h-4 mr-2" />
-                              Video URL (YouTube, etc.)
+                            <div className="flex items-center gap-2">
+                              <Youtube className="w-4 h-4" />
+                              Video URL
                             </div>
                           </SelectItem>
                           <SelectItem value="caption">
-                            <div className="flex items-center">
-                              <Captions className="w-4 h-4 mr-2" />
-                              Caption File (.srt, .vtt)
+                            <div className="flex items-center gap-2">
+                              <Captions className="w-4 h-4" />
+                              Caption File
                             </div>
                           </SelectItem>
                         </SelectContent>
@@ -1039,35 +1034,37 @@ const AdminKnowledge = () => {
                         <Input 
                           value={videoUrl}
                           onChange={(e) => setVideoUrl(e.target.value)}
-                          placeholder="https://www.youtube.com/watch?v=..."
+                          placeholder="https://youtube.com/watch?v=..."
                         />
                         <p className="text-xs text-muted-foreground">
-                          Supports YouTube and other platforms with available transcripts
+                          YouTube and platforms with transcripts
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <Label>Caption File (.srt, .vtt) *</Label>
-                        <Input 
-                          type="file"
-                          accept=".srt,.vtt"
-                          onChange={(e) => setCaptionFile(e.target.files?.[0] || null)}
-                          className="cursor-pointer"
-                        />
-                        {captionFile && (
-                          <p className="text-sm text-muted-foreground">
-                            Selected: {captionFile.name}
-                          </p>
-                        )}
-                        <div className="space-y-2 mt-2">
+                      <>
+                        <div className="space-y-2">
+                          <Label>Caption File (.srt, .vtt) *</Label>
+                          <Input 
+                            type="file"
+                            accept=".srt,.vtt"
+                            onChange={(e) => setCaptionFile(e.target.files?.[0] || null)}
+                            className="cursor-pointer"
+                          />
+                          {captionFile && (
+                            <p className="text-xs text-muted-foreground">
+                              {captionFile.name}
+                            </p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
                           <Label>Video URL (optional)</Label>
                           <Input 
                             value={videoUrl}
                             onChange={(e) => setVideoUrl(e.target.value)}
-                            placeholder="Link to the original video"
+                            placeholder="Original video link"
                           />
                         </div>
-                      </div>
+                      </>
                     )}
                     
                     <Button 
@@ -1090,74 +1087,94 @@ const AdminKnowledge = () => {
                   </div>
                 </DialogContent>
               </Dialog>
+
+              {/* Mobile tag button */}
+              <Dialog open={tagDialogOpen} onOpenChange={setTagDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="sm:hidden">
+                    <Tag className="w-4 h-4" />
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
             </div>
           </div>
 
           {/* Documents Tab */}
-          <TabsContent value="documents" className="space-y-4">
+          <TabsContent value="documents" className="space-y-3 mt-0">
             {docsLoading ? (
-              <div className="flex justify-center py-12">
+              <div className="flex justify-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : documents.length === 0 ? (
-              <Card className="bg-card/50 border-border/50">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <FileText className="w-12 h-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground text-center">No documents uploaded yet</p>
-                  <p className="text-sm text-muted-foreground text-center mt-1">
+              <Card className="bg-card/30 border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="p-4 rounded-full bg-muted/50 mb-4">
+                    <FileText className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-foreground mb-1">No documents yet</p>
+                  <p className="text-sm text-muted-foreground max-w-xs">
                     Upload PDF, DOCX, or TXT files to build your knowledge base
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="space-y-2">
                 {documents.map(doc => (
-                  <Card key={doc.id} className="bg-card/50 border-border/50">
+                  <Card key={doc.id} className="bg-card/50 border-border/50 hover:bg-card/70 transition-colors">
                     <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className="p-2 rounded-lg bg-primary/20 shrink-0">
-                            <FileText className="w-5 h-5 text-primary" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-foreground truncate">{doc.title}</h3>
-                            <p className="text-sm text-muted-foreground truncate">{doc.file_name}</p>
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                              <StatusBadge status={doc.status} />
-                              <span className="text-xs text-muted-foreground">
-                                {formatFileSize(doc.file_size)}
-                              </span>
-                              {doc.chunk_count > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  • {doc.chunk_count} chunks
-                                </span>
-                              )}
-                            </div>
-                            {doc.error_message && (
-                              <p className="text-sm text-red-400 mt-2">{doc.error_message}</p>
-                            )}
-                          </div>
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10 shrink-0 mt-0.5">
+                          <FileText className="w-4 h-4 text-primary" />
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {(doc.status === 'failed' || doc.status === 'completed') && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => reprocessMutation.mutate({ id: doc.id, type: 'document' })}
-                              disabled={reprocessMutation.isPending}
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </Button>
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-medium text-foreground leading-tight line-clamp-1">
+                              {doc.title}
+                            </h3>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {(doc.status === 'failed' || doc.status === 'completed') && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => reprocessMutation.mutate({ id: doc.id, type: 'document' })}
+                                  disabled={reprocessMutation.isPending}
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => deleteDocumentMutation.mutate(doc.id)}
+                                disabled={deleteDocumentMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{doc.file_name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge status={doc.status} />
+                            <span className="text-xs text-muted-foreground">
+                              {formatFileSize(doc.file_size)}
+                            </span>
+                            {doc.chunk_count > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                • {doc.chunk_count} chunks
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground hidden sm:inline">
+                              • {formatDate(doc.created_at)}
+                            </span>
+                          </div>
+                          {doc.error_message && (
+                            <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-destructive/10">
+                              <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                              <p className="text-xs text-destructive line-clamp-2">{doc.error_message}</p>
+                            </div>
                           )}
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => deleteDocumentMutation.mutate(doc.id)}
-                            disabled={deleteDocumentMutation.isPending}
-                            className="text-red-400 hover:text-red-300 hover:border-red-400"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -1168,87 +1185,98 @@ const AdminKnowledge = () => {
           </TabsContent>
 
           {/* Videos Tab */}
-          <TabsContent value="videos" className="space-y-4">
+          <TabsContent value="videos" className="space-y-3 mt-0">
             {videosLoading ? (
-              <div className="flex justify-center py-12">
+              <div className="flex justify-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : videos.length === 0 ? (
-              <Card className="bg-card/50 border-border/50">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Video className="w-12 h-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground text-center">No videos added yet</p>
-                  <p className="text-sm text-muted-foreground text-center mt-1">
+              <Card className="bg-card/30 border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="p-4 rounded-full bg-muted/50 mb-4">
+                    <Video className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <p className="font-medium text-foreground mb-1">No videos yet</p>
+                  <p className="text-sm text-muted-foreground max-w-xs">
                     Add YouTube URLs or upload caption files
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="space-y-2">
                 {videos.map(video => (
-                  <Card key={video.id} className="bg-card/50 border-border/50">
+                  <Card key={video.id} className="bg-card/50 border-border/50 hover:bg-card/70 transition-colors">
                     <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className="p-2 rounded-lg bg-secondary/40 shrink-0">
-                            {video.platform === 'youtube' ? (
-                              <Youtube className="w-5 h-5 text-red-400" />
-                            ) : video.caption_file_name ? (
-                              <Captions className="w-5 h-5 text-secondary-foreground" />
-                            ) : (
-                              <Video className="w-5 h-5 text-secondary-foreground" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-foreground truncate">{video.title}</h3>
-                            {video.video_url && (
-                              <a 
-                                href={video.video_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-sm text-primary hover:underline truncate block"
-                              >
-                                {video.video_url}
-                              </a>
-                            )}
-                            {video.caption_file_name && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                Caption: {video.caption_file_name}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                              <StatusBadge status={video.status} />
-                              {video.chunk_count > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  {video.chunk_count} chunks
-                                </span>
-                              )}
-                            </div>
-                            {video.error_message && (
-                              <p className="text-sm text-red-400 mt-2">{video.error_message}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {(video.status === 'failed' || video.status === 'completed') && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => reprocessMutation.mutate({ id: video.id, type: 'video' })}
-                              disabled={reprocessMutation.isPending}
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </Button>
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-lg bg-secondary/20 shrink-0 mt-0.5">
+                          {video.platform === 'youtube' ? (
+                            <Youtube className="w-4 h-4 text-red-500" />
+                          ) : video.caption_file_name ? (
+                            <Captions className="w-4 h-4 text-secondary-foreground" />
+                          ) : (
+                            <Video className="w-4 h-4 text-secondary-foreground" />
                           )}
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => deleteVideoMutation.mutate(video.id)}
-                            disabled={deleteVideoMutation.isPending}
-                            className="text-red-400 hover:text-red-300 hover:border-red-400"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-medium text-foreground leading-tight line-clamp-1">
+                              {video.title}
+                            </h3>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {(video.status === 'failed' || video.status === 'completed') && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => reprocessMutation.mutate({ id: video.id, type: 'video' })}
+                                  disabled={reprocessMutation.isPending}
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => deleteVideoMutation.mutate(video.id)}
+                                disabled={deleteVideoMutation.isPending}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          {video.video_url && (
+                            <a 
+                              href={video.video_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline truncate block"
+                            >
+                              {video.video_url}
+                            </a>
+                          )}
+                          {video.caption_file_name && !video.video_url && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              Caption: {video.caption_file_name}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge status={video.status} />
+                            {video.chunk_count > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                {video.chunk_count} chunks
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground hidden sm:inline">
+                              • {formatDate(video.created_at)}
+                            </span>
+                          </div>
+                          {video.error_message && (
+                            <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-destructive/10">
+                              <AlertCircle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                              <p className="text-xs text-destructive line-clamp-2">{video.error_message}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
