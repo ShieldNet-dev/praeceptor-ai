@@ -45,32 +45,32 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="relative py-24 px-4">
+    <section id="features" className="relative py-16 sm:py-24 px-4">
       <div className="container mx-auto max-w-6xl">
-        <div className="text-center mb-16 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
-          <span className="inline-block px-4 py-1.5 mb-4 text-sm font-mono text-primary bg-primary/10 rounded-full border border-primary/20">
+        <div className="text-center mb-10 sm:mb-16 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
+          <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 mb-3 sm:mb-4 text-xs sm:text-sm font-mono text-primary bg-primary/10 rounded-full border border-primary/20">
             &lt;features /&gt;
           </span>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-2">
             Your Path to <span className="text-gradient">Cyber Mastery</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
             Comprehensive training modules designed by industry experts to take you from beginner to security professional.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="group relative p-6 rounded-xl glass cyber-border hover:bg-card/80 transition-all duration-300 opacity-0 animate-fade-in-up"
+              className="group relative p-5 sm:p-6 rounded-xl glass cyber-border hover:bg-card/80 transition-all duration-300 opacity-0 animate-fade-in-up"
               style={{ animationDelay: `${0.2 + index * 0.1}s`, animationFillMode: 'forwards' }}
             >
-              <div className="mb-4 inline-flex p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
-                <feature.icon className="w-6 h-6" />
+              <div className="mb-3 sm:mb-4 inline-flex p-2.5 sm:p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                <feature.icon className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-foreground">{feature.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
+              <h3 className="text-base sm:text-lg font-semibold mb-2 text-foreground">{feature.title}</h3>
+              <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">{feature.description}</p>
             </div>
           ))}
         </div>

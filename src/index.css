@@ -6,52 +6,58 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
+    /* Core brand colors - #000000 core, #1A1F3A main bg */
+    --background: 231 38% 16%;
+    --foreground: 0 0% 100%;
 
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 96%;
+    /* Card surfaces - slightly lighter than background */
+    --card: 231 38% 12%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 231 38% 12%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 175 80% 50%;
-    --primary-foreground: 222 47% 6%;
+    /* Primary: #1ECBE1 - vibrant cyan */
+    --primary: 187 80% 50%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 222 30% 14%;
-    --secondary-foreground: 210 40% 96%;
+    /* Secondary: #0F6F78 - deep teal */
+    --secondary: 185 78% 26%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 222 30% 12%;
-    --muted-foreground: 215 20% 55%;
+    /* Muted states */
+    --muted: 231 30% 20%;
+    --muted-foreground: 210 20% 65%;
 
-    --accent: 280 70% 60%;
-    --accent-foreground: 210 40% 98%;
+    /* Accent - using primary for cohesive feel */
+    --accent: 185 78% 36%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 222 47% 6%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 0%;
 
-    --border: 222 30% 18%;
-    --input: 222 30% 18%;
-    --ring: 175 80% 50%;
+    --border: 231 30% 24%;
+    --input: 231 30% 24%;
+    --ring: 187 80% 50%;
 
     --radius: 0.75rem;
 
-    /* Custom tokens */
-    --glow-primary: 0 0 30px hsl(175 80% 50% / 0.4);
-    --glow-accent: 0 0 30px hsl(280 70% 60% / 0.3);
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 6%) 0%, hsl(222 47% 10%) 50%, hsl(222 47% 6%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(222 47% 10%) 0%, hsl(222 47% 7%) 100%);
-    --gradient-primary: linear-gradient(135deg, hsl(175 80% 50%) 0%, hsl(175 80% 40%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(280 70% 60%) 0%, hsl(175 80% 50%) 100%);
-    --grid-color: hsl(175 80% 50% / 0.03);
+    /* Custom tokens with new colors */
+    --glow-primary: 0 0 30px hsl(187 80% 50% / 0.4);
+    --glow-accent: 0 0 30px hsl(185 78% 36% / 0.4);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 0%) 0%, hsl(231 38% 16%) 50%, hsl(0 0% 0%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(231 38% 18%) 0%, hsl(231 38% 12%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(187 80% 50%) 0%, hsl(185 78% 36%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(185 78% 36%) 0%, hsl(187 80% 50%) 100%);
+    --grid-color: hsl(187 80% 50% / 0.03);
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
+    --background: 231 38% 16%;
+    --foreground: 0 0% 100%;
   }
 }
 
@@ -62,8 +68,9 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background-color: hsl(0 0% 0%);
     background-image: 
-      radial-gradient(ellipse at 50% 0%, hsl(175 80% 50% / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 0%, hsl(187 80% 50% / 0.08) 0%, transparent 50%),
       linear-gradient(var(--grid-color) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
     background-size: 100% 100%, 60px 60px, 60px 60px;
@@ -110,7 +117,7 @@
   .cyber-border::before {
     content: '';
     @apply absolute inset-0 rounded-lg;
-    background: linear-gradient(135deg, hsl(175 80% 50% / 0.3), transparent 50%, hsl(280 70% 60% / 0.3));
+    background: linear-gradient(135deg, hsl(187 80% 50% / 0.3), transparent 50%, hsl(185 78% 36% / 0.3));
     padding: 1px;
     -webkit-mask: 
       linear-gradient(#fff 0 0) content-box, 
@@ -127,10 +134,10 @@
 /* Animations */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px hsl(175 80% 50% / 0.4);
+    box-shadow: 0 0 20px hsl(187 80% 50% / 0.4);
   }
   50% {
-    box-shadow: 0 0 40px hsl(175 80% 50% / 0.6);
+    box-shadow: 0 0 40px hsl(187 80% 50% / 0.6);
   }
 }
 
@@ -197,9 +204,9 @@
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    hsl(175 80% 50% / 0) 0%,
-    hsl(175 80% 50% / 0.3) 50%,
-    hsl(175 80% 50% / 0) 100%
+    hsl(187 80% 50% / 0) 0%,
+    hsl(187 80% 50% / 0.3) 50%,
+    hsl(187 80% 50% / 0) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
