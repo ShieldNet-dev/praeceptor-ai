@@ -27,6 +27,7 @@ import {
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { DailyChallenge } from '@/components/DailyChallenge';
 import { CourseProgressCard } from '@/components/CourseProgressCard';
+import ProcessingProgress from '@/components/ProcessingProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreakTracker } from '@/hooks/useStreakTracker';
 import { supabase } from '@/integrations/supabase/client';
@@ -360,6 +361,9 @@ const Dashboard = () => {
             })}
           </div>
         </div>
+
+        {/* Admin Processing Progress - Only visible to admins */}
+        <ProcessingProgress />
 
         {/* Course Progress & Daily Challenge - Side by side on desktop */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
