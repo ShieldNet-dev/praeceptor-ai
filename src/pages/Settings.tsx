@@ -340,7 +340,7 @@ const Settings = () => {
       const credential = await navigator.credentials.create(createCredentialOptions) as PublicKeyCredential;
       
       if (credential) {
-        // Store credential ID for verification during login
+        // Store credential ID for verification during login (NO password stored)
         const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         
         localStorage.setItem(`biometrics_credential_${user.id}`, JSON.stringify({
@@ -348,12 +348,13 @@ const Settings = () => {
           email: user.email
         }));
         
-        // Store encrypted auth for biometric login (in a real app, use proper encryption)
-        localStorage.setItem(`biometrics_auth_${user.id}`, JSON.stringify({
-          password
-        }));
-        
+        // SECURITY FIX: Do NOT store password in localStorage
+        // Instead, just mark biometrics as enabled - user will use WebAuthn assertion for login
         localStorage.setItem(`biometrics_${user.id}`, 'enabled');
+        
+        // Clean up any previously stored passwords (migration for existing users)
+        localStorage.removeItem(`biometrics_auth_${user.id}`);
+        
         setBiometricsEnabled(true);
         setShowBiometricDialog(false);
         setBiometricPassword('');
