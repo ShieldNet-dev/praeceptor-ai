@@ -389,15 +389,21 @@ const Chat = () => {
 
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
+        // Use signed URLs instead of public URLs for private bucket security
+        const { data: urlData, error: urlError } = await supabase.storage
           .from('user-uploads')
-          .getPublicUrl(filePath);
+          .createSignedUrl(filePath, 3600); // 1 hour expiration
+
+        if (urlError) {
+          console.error('Failed to create signed URL:', urlError);
+          throw urlError;
+        }
 
         newFiles.push({
           name: file.name,
           type: file.type,
           size: file.size,
-          url: urlData.publicUrl,
+          url: urlData.signedUrl,
           storagePath: filePath
         });
 
