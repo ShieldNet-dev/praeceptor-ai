@@ -272,9 +272,38 @@ serve(async (req) => {
 
     const { message, track, conversationId, history = [], stream = true } = await req.json();
 
-    if (!message || !track) {
+    // Input validation constants
+    const MAX_MESSAGE_LENGTH = 5000;
+    const VALID_TRACKS = ['learning', 'mentorship', 'exam_prep', 'siwes', 'academic', 'career'];
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Validate message
+    if (!message || typeof message !== 'string') {
       return new Response(
-        JSON.stringify({ error: "Message and track are required" }),
+        JSON.stringify({ error: "Message is required and must be a string" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Message must be less than ${MAX_MESSAGE_LENGTH} characters` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate track
+    if (!track || !VALID_TRACKS.includes(track)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid track. Must be one of: ${VALID_TRACKS.join(', ')}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate conversationId format if provided
+    if (conversationId && !UUID_REGEX.test(conversationId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid conversation ID format" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
