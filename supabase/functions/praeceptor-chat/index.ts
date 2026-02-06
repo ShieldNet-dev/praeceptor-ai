@@ -236,6 +236,40 @@ serve(async (req) => {
   }
 
   try {
+    // Authentication: Verify user is logged in
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.error("Missing or invalid authorization header");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    // Create an authenticated client to verify the user
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify the user's JWT token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error("Failed to verify user token:", claimsError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub as string;
+    console.log(`Authenticated user: ${userId}`);
+
     const { message, track, conversationId, history = [], stream = true } = await req.json();
 
     if (!message || !track) {
@@ -245,9 +279,24 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client for knowledge base search
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // If conversationId is provided, verify the user owns the conversation
+    if (conversationId) {
+      const { data: conv, error: convError } = await supabaseAuth
+        .from("conversations")
+        .select("user_id")
+        .eq("id", conversationId)
+        .single();
+
+      if (convError || !conv || conv.user_id !== userId) {
+        console.error("User does not own conversation:", conversationId);
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Initialize Supabase client with service key for knowledge base search
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Search knowledge base for relevant context
@@ -261,7 +310,7 @@ serve(async (req) => {
       console.log("Found relevant knowledge base context");
     }
 
-    console.log(`Processing message for track: ${track}, conversationId: ${conversationId}, history: ${history.length} messages, streaming: ${stream}`);
+    console.log(`Processing message for track: ${track}, conversationId: ${conversationId}, history: ${history.length} messages, streaming: ${stream}, user: ${userId}`);
 
     // Build messages array with conversation history
     const messages: Array<{ role: string; content: string }> = [
