@@ -22,7 +22,8 @@ import {
   HelpCircle,
   Briefcase,
   GraduationCap,
-  Database
+  Database,
+  Trophy
 } from 'lucide-react';
 import praeceptorLogoIcon from '@/assets/praeceptor-logo-icon.png';
 import { DailyChallenge } from '@/components/DailyChallenge';
@@ -278,54 +279,54 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto max-w-6xl px-4 py-8 relative z-10">
+      <main className="container mx-auto max-w-6xl px-3 md:px-4 py-4 md:py-8 relative z-10">
         {/* Welcome section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">
+        <div className="mb-4 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">
             Welcome back, <span className="text-gradient">{user?.user_metadata?.full_name || 'Learner'}</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Ready to continue your cybersecurity journey?
           </p>
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="glass rounded-xl p-4 cyber-border">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <Zap className="w-4 h-4 text-primary" />
+        {/* Stats grid - Mobile responsive */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="glass rounded-xl p-3 md:p-4 cyber-border">
+            <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+              <div className="p-1.5 md:p-2 rounded-lg bg-primary/20">
+                <Zap className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
               </div>
-              <span className="text-2xl font-bold">{totalXP}</span>
+              <span className="text-xl md:text-2xl font-bold">{totalXP}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Total XP</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Total XP</p>
           </div>
-          <div className="glass rounded-xl p-4 cyber-border">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-orange-500/20">
-                <Flame className="w-4 h-4 text-orange-500" />
+          <div className="glass rounded-xl p-3 md:p-4 cyber-border">
+            <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+              <div className="p-1.5 md:p-2 rounded-lg bg-orange-500/20">
+                <Flame className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-500" />
               </div>
-              <span className="text-2xl font-bold">{maxStreak}</span>
+              <span className="text-xl md:text-2xl font-bold">{maxStreak}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Day Streak</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Day Streak</p>
           </div>
-          <div className="glass rounded-xl p-4 cyber-border">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-violet-500/20">
-                <MessageSquare className="w-4 h-4 text-violet-500" />
+          <div className="glass rounded-xl p-3 md:p-4 cyber-border">
+            <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+              <div className="p-1.5 md:p-2 rounded-lg bg-violet-500/20">
+                <MessageSquare className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-500" />
               </div>
-              <span className="text-2xl font-bold">{totalSessions}</span>
+              <span className="text-xl md:text-2xl font-bold">{totalSessions}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Sessions</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Sessions</p>
           </div>
-          <div className="glass rounded-xl p-4 cyber-border">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <Clock className="w-4 h-4 text-emerald-500" />
+          <div className="glass rounded-xl p-3 md:p-4 cyber-border">
+            <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+              <div className="p-1.5 md:p-2 rounded-lg bg-emerald-500/20">
+                <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-500" />
               </div>
-              <span className="text-2xl font-bold">{userTracks.length}</span>
+              <span className="text-xl md:text-2xl font-bold">{userTracks.length}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Active Tracks</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Active Tracks</p>
           </div>
         </div>
 
@@ -365,34 +366,44 @@ const Dashboard = () => {
         {/* Admin Processing Progress - Only visible to admins */}
         <ProcessingProgress />
 
-        {/* Course Progress & Daily Challenge - Side by side on desktop */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* Course Progress & Daily Challenge - Stack on mobile, side by side on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-8">
           {/* Course Progress */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Your Courses</h2>
+          <div className="min-w-0">
+            <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Your Courses</h2>
             <CourseProgressCard />
           </div>
           
           {/* Daily Challenge Section */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Daily Cyber Challenge</h2>
+          <div className="min-w-0">
+            <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Daily Cyber Challenge</h2>
             <DailyChallenge />
           </div>
         </div>
 
         {/* Quick Access Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Quick Access</h2>
-          <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Quick Access</h2>
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-4">
+            <button
+              onClick={() => navigate('/leaderboard')}
+              className="group glass rounded-xl p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+            >
+              <div className="inline-flex p-1.5 md:p-2 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 text-white mb-2 md:mb-3">
+                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              </div>
+              <h3 className="font-medium text-foreground text-xs md:text-sm">Leaderboard</h3>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">Compete</p>
+            </button>
             <button
               onClick={() => navigate('/courses')}
-              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-primary to-accent text-white mb-3">
-                <GraduationCap className="w-4 h-4" />
+              <div className="inline-flex p-1.5 md:p-2 rounded-lg bg-gradient-to-br from-primary to-accent text-white mb-2 md:mb-3">
+                <GraduationCap className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Courses</h3>
-              <p className="text-xs text-muted-foreground mt-1">Earn XP</p>
+              <h3 className="font-medium text-foreground text-xs md:text-sm">Courses</h3>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">Earn XP</p>
             </button>
             <button
               onClick={() => navigate('/career')}

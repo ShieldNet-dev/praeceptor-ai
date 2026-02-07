@@ -138,19 +138,19 @@ export const CourseProgressCard = () => {
   }
 
   return (
-    <div className="glass rounded-xl p-6 cyber-border">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold flex items-center gap-2">
-          <GraduationCap className="w-5 h-5 text-primary" />
+    <div className="glass rounded-xl p-4 md:p-6 cyber-border h-full">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <h3 className="font-semibold flex items-center gap-2 text-sm md:text-base">
+          <GraduationCap className="w-4 h-4 md:w-5 md:h-5 text-primary" />
           Course Progress
         </h3>
-        <div className="flex items-center gap-2 text-sm">
-          <Award className="w-4 h-4 text-primary" />
+        <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
+          <Award className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
           <span className="font-medium">{totalCourseXP} XP earned</span>
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         {courses.map((courseProgress) => {
           const progressPercent = courseProgress.totalModules > 0 
             ? (courseProgress.completedModules / courseProgress.totalModules) * 100 
@@ -160,21 +160,21 @@ export const CourseProgressCard = () => {
             <button
               key={courseProgress.id}
               onClick={() => navigate(`/courses/${courseProgress.course_id}`)}
-              className="w-full text-left p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-all group"
+              className="w-full text-left p-3 md:p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-all group"
             >
-              <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex items-start justify-between gap-2 md:gap-3 mb-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-1.5 md:gap-2 mb-1">
                     {courseProgress.is_completed ? (
-                      <Trophy className="w-4 h-4 text-success flex-shrink-0" />
+                      <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4 text-success flex-shrink-0" />
                     ) : (
-                      <PlayCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                      <PlayCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary flex-shrink-0" />
                     )}
-                    <h4 className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                    <h4 className="font-medium text-foreground text-sm md:text-base truncate group-hover:text-primary transition-colors">
                       {courseProgress.course.title}
                     </h4>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 md:gap-3 text-xs text-muted-foreground">
                     <span>{courseProgress.completedModules}/{courseProgress.totalModules} modules</span>
                     <span>•</span>
                     <span className="flex items-center gap-1">
@@ -186,8 +186,8 @@ export const CourseProgressCard = () => {
                 <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
               </div>
               <div className="flex items-center gap-2">
-                <Progress value={progressPercent} className="h-2 flex-1" />
-                <span className="text-xs font-medium text-muted-foreground w-10 text-right">
+                <Progress value={progressPercent} className="h-1.5 md:h-2 flex-1" />
+                <span className="text-xs font-medium text-muted-foreground w-8 md:w-10 text-right">
                   {Math.round(progressPercent)}%
                 </span>
               </div>

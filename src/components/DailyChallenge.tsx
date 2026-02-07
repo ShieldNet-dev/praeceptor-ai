@@ -123,30 +123,30 @@ export const DailyChallenge = () => {
   }
 
   return (
-    <div className="glass rounded-xl p-6 cyber-border">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/20">
-            <Trophy className="w-5 h-5 text-primary" />
+    <div className="glass rounded-xl p-4 md:p-6 cyber-border h-full">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="p-1.5 md:p-2 rounded-lg bg-primary/20">
+            <Trophy className="w-4 h-4 md:w-5 md:h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold">Daily Cyber Challenge</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-semibold text-sm md:text-base">Daily Cyber Challenge</h3>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {alreadyCompleted ? 'Completed!' : 'Test your knowledge'}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
-          <Zap className="w-4 h-4" />
+        <div className="flex items-center gap-1 md:gap-1.5 text-xs md:text-sm font-medium text-primary">
+          <Zap className="w-3.5 h-3.5 md:w-4 md:h-4" />
           +{challenge.xp_reward} XP
         </div>
       </div>
 
-      <p className="text-foreground mb-4">{challenge.question}</p>
+      <p className="text-sm md:text-base text-foreground mb-3 md:mb-4">{challenge.question}</p>
 
-      <div className="space-y-2 mb-4">
+      <div className="space-y-2 mb-3 md:mb-4">
         {challenge.options.map((option, index) => {
-          let buttonClass = "w-full justify-start text-left h-auto py-3 px-4";
+          let buttonClass = "w-full justify-start text-left h-auto py-2.5 md:py-3 px-3 md:px-4 text-sm md:text-base";
           
           if (hasAnswered) {
             if (index === challenge.correct_answer) {
@@ -166,16 +166,16 @@ export const DailyChallenge = () => {
               onClick={() => !hasAnswered && setSelectedAnswer(index)}
               disabled={hasAnswered}
             >
-              <span className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-sm">
+              <span className="flex items-center gap-2 md:gap-3">
+                <span className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm flex-shrink-0">
                   {String.fromCharCode(65 + index)}
                 </span>
-                {option}
+                <span className="text-left">{option}</span>
                 {hasAnswered && index === challenge.correct_answer && (
-                  <CheckCircle className="w-4 h-4 ml-auto text-green-500" />
+                  <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 ml-auto text-green-500 flex-shrink-0" />
                 )}
                 {hasAnswered && index === selectedAnswer && !wasCorrect && (
-                  <XCircle className="w-4 h-4 ml-auto text-red-500" />
+                  <XCircle className="w-3.5 h-3.5 md:w-4 md:h-4 ml-auto text-red-500 flex-shrink-0" />
                 )}
               </span>
             </Button>

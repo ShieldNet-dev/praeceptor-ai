@@ -23,6 +23,7 @@ import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import ModuleView from "./pages/ModuleView";
 import AdminKnowledge from "./pages/AdminKnowledge";
+import LeaderboardPage from "./pages/Leaderboard";
 
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:courseId" element={<CourseDetail />} />
             <Route path="/courses/:courseId/modules/:moduleId" element={<ModuleView />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
