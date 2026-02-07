@@ -47,6 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      certificates: {
+        Row: {
+          certificate_type: string
+          completion_date: string
+          course_name: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          module_name: string | null
+          recipient_name: string
+          title: string
+          user_id: string
+          verification_code: string | null
+        }
+        Insert: {
+          certificate_type: string
+          completion_date?: string
+          course_name?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          module_name?: string | null
+          recipient_name: string
+          title: string
+          user_id: string
+          verification_code?: string | null
+        }
+        Update: {
+          certificate_type?: string
+          completion_date?: string
+          course_name?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          module_name?: string | null
+          recipient_name?: string
+          title?: string
+          user_id?: string
+          verification_code?: string | null
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -451,6 +493,33 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard_preferences: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          is_visible: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_visible?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_visible?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -490,6 +559,9 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          referral_code: string | null
+          referred_by: string | null
+          total_referrals: number | null
           updated_at: string
           user_id: string
         }
@@ -499,6 +571,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          referral_code?: string | null
+          referred_by?: string | null
+          total_referrals?: number | null
           updated_at?: string
           user_id: string
         }
@@ -508,8 +583,44 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          referral_code?: string | null
+          referred_by?: string | null
+          total_referrals?: number | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          referral_code: string | null
+          referred_id: string | null
+          referrer_id: string
+          status: string
+          xp_bonus_given: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string | null
+          referred_id?: string | null
+          referrer_id: string
+          status?: string
+          xp_bonus_given?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string | null
+          referred_id?: string | null
+          referrer_id?: string
+          status?: string
+          xp_bonus_given?: number | null
         }
         Relationships: []
       }
@@ -549,6 +660,48 @@ export type Database = {
           subject?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achievement_type: string
+          badge_icon: string | null
+          badge_name: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          share_token: string | null
+          title: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          achievement_type: string
+          badge_icon?: string | null
+          badge_name: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          share_token?: string | null
+          title: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          achievement_type?: string
+          badge_icon?: string | null
+          badge_name?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          share_token?: string | null
+          title?: string
+          user_id?: string
+          xp_earned?: number
         }
         Relationships: []
       }
@@ -815,7 +968,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      alltime_xp_leaderboard: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          is_visible: boolean | null
+          max_streak: number | null
+          rank: number | null
+          total_xp: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      weekly_xp_leaderboard: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          is_visible: boolean | null
+          max_streak: number | null
+          rank: number | null
+          total_xp: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
