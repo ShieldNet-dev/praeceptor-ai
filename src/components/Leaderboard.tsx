@@ -209,48 +209,48 @@ export const Leaderboard = () => {
   };
 
   const LeaderboardList = ({ data }: { data: LeaderboardEntry[] }) => (
-    <ScrollArea className="h-[400px]">
-      <div className="space-y-2 pr-4">
+    <ScrollArea className="h-[350px] sm:h-[400px]">
+      <div className="space-y-2 pr-2 sm:pr-4">
         {data.map((entry) => {
           const isCurrentUser = user && entry.user_id === user.id;
           
           return (
             <div
               key={entry.user_id}
-              className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg transition-colors ${
                 isCurrentUser 
                   ? 'bg-primary/10 border border-primary/30' 
                   : 'bg-secondary/30 hover:bg-secondary/50'
               }`}
             >
-              <div className="w-8 flex-shrink-0">
+              <div className="w-6 sm:w-8 flex-shrink-0">
                 {getRankIcon(entry.rank)}
               </div>
-              <Avatar className="w-10 h-10 flex-shrink-0">
+              <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
                 <AvatarImage src={entry.avatar_url || undefined} />
-                <AvatarFallback className="text-sm">
+                <AvatarFallback className="text-xs sm:text-sm">
                   {entry.display_name.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className={`font-medium truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
+                <p className={`font-medium text-sm sm:text-base truncate ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
                   {entry.display_name} {isCurrentUser && '(You)'}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Flame className="w-3 h-3 text-orange-500" />
-                    {entry.max_streak} day streak
+                    {entry.max_streak}d
                   </span>
                 </div>
               </div>
-              <Badge variant="secondary" className="font-bold">
+              <Badge variant="secondary" className="font-bold text-xs sm:text-sm">
                 {entry.total_xp.toLocaleString()} XP
               </Badge>
             </div>
           );
         })}
         {data.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 text-muted-foreground text-sm">
             No leaderboard data yet. Start learning to appear here!
           </div>
         )}

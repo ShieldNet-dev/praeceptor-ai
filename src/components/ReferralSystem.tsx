@@ -133,40 +133,40 @@ export const ReferralSystem = () => {
   const achievedBadges = getAchievedBadges();
 
   return (
-    <Card className="glass cyber-border">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary" />
+    <Card className="glass cyber-border overflow-hidden">
+      <CardHeader className="p-4 sm:p-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           Invite Friends & Earn Rewards
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded-lg bg-secondary/30 text-center">
-            <p className="text-2xl font-bold text-foreground">{stats?.totalReferrals || 0}</p>
-            <p className="text-xs text-muted-foreground">Total Invited</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="p-2 sm:p-3 rounded-lg bg-secondary/30 text-center">
+            <p className="text-lg sm:text-2xl font-bold text-foreground">{stats?.totalReferrals || 0}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Invited</p>
           </div>
-          <div className="p-3 rounded-lg bg-green-500/10 text-center">
-            <p className="text-2xl font-bold text-green-500">{stats?.completedReferrals || 0}</p>
-            <p className="text-xs text-muted-foreground">Completed</p>
+          <div className="p-2 sm:p-3 rounded-lg bg-green-500/10 text-center">
+            <p className="text-lg sm:text-2xl font-bold text-green-500">{stats?.completedReferrals || 0}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Completed</p>
           </div>
-          <div className="p-3 rounded-lg bg-primary/10 text-center">
-            <p className="text-2xl font-bold text-primary">{stats?.totalXpEarned || 0}</p>
-            <p className="text-xs text-muted-foreground">XP Earned</p>
+          <div className="p-2 sm:p-3 rounded-lg bg-primary/10 text-center">
+            <p className="text-lg sm:text-2xl font-bold text-primary">{stats?.totalXpEarned || 0}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">XP</p>
           </div>
         </div>
 
         {/* Referral Link */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Your Referral Link</p>
+        <div className="space-y-2 sm:space-y-3">
+          <p className="text-xs sm:text-sm font-medium">Your Referral Link</p>
           <div className="flex gap-2">
             <Input 
               value={referralLink} 
               readOnly 
-              className="flex-1 bg-secondary/30"
+              className="flex-1 bg-secondary/30 text-xs sm:text-sm"
             />
-            <Button onClick={handleCopyLink} variant="outline">
+            <Button onClick={handleCopyLink} variant="outline" size="sm" className="shrink-0">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </Button>
           </div>
@@ -174,12 +174,13 @@ export const ReferralSystem = () => {
 
         {/* Share Buttons */}
         <div className="flex gap-2">
-          <Button onClick={handleShareTwitter} variant="outline" className="flex-1 gap-2">
-            <Twitter className="w-4 h-4" />
-            Twitter
+          <Button onClick={handleShareTwitter} variant="outline" size="sm" className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Twitter className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Twitter</span>
+            <span className="sm:hidden">X</span>
           </Button>
-          <Button onClick={handleShareWhatsApp} variant="outline" className="flex-1 gap-2">
-            <MessageCircle className="w-4 h-4" />
+          <Button onClick={handleShareWhatsApp} variant="outline" size="sm" className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm">
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
             WhatsApp
           </Button>
         </div>
