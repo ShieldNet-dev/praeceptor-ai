@@ -36,26 +36,27 @@ const LeaderboardPage = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-50 glass border-b border-border/50">
-        <div className="container mx-auto max-w-6xl px-4 py-4 flex items-center gap-4">
+        <div className="container mx-auto max-w-6xl px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/dashboard')}
+            className="shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-3">
-            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-10 h-10" />
-            <div>
-              <h1 className="font-semibold text-foreground">Leaderboard & Referrals</h1>
-              <p className="text-xs text-muted-foreground">Compete and invite friends</p>
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <img src={praeceptorLogoIcon} alt="Praeceptor AI" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="font-semibold text-foreground text-sm sm:text-base truncate">Leaderboard & Referrals</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Compete and invite friends</p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto max-w-6xl px-4 py-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-6">
+      <main className="container mx-auto max-w-6xl px-3 sm:px-4 py-4 sm:py-8 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
           <LeaderboardComponent />
           <ReferralSystem />
         </div>
