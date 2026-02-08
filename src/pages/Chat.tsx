@@ -516,11 +516,17 @@ const Chat = () => {
         .filter(m => m.id !== tempUserMsg.id)
         .map(m => ({ role: m.role, content: m.content }));
       
+      // Get user's session token for authenticated request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Please sign in to continue');
+      }
+      
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ 
           message: messageContent, 
@@ -700,11 +706,17 @@ const Chat = () => {
       // Stream AI response
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/praeceptor-chat`;
       
+      // Get user's session token for authenticated request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Please sign in to continue');
+      }
+      
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ 
           message: messageContent, 
