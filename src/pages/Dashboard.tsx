@@ -382,78 +382,79 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Access Section */}
+        {/* Quick Access Section - Consistent mobile styling */}
         <div className="mb-6 md:mb-8">
           <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Quick Access</h2>
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3">
             <button
               onClick={() => navigate('/leaderboard')}
-              className="group glass rounded-xl p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-1.5 md:p-2 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 text-white mb-2 md:mb-3">
-                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 text-white mb-2">
+                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-xs md:text-sm">Leaderboard</h3>
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">Compete</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">Leaderboard</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Compete</p>
             </button>
             <button
               onClick={() => navigate('/courses')}
-              className="group glass rounded-xl p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-1.5 md:p-2 rounded-lg bg-gradient-to-br from-primary to-accent text-white mb-2 md:mb-3">
-                <GraduationCap className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary to-accent text-white mb-2">
+                <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-xs md:text-sm">Courses</h3>
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">Earn XP</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">Courses</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Earn XP</p>
             </button>
             <button
               onClick={() => navigate('/career')}
-              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 text-white mb-3">
-                <Briefcase className="w-4 h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 text-white mb-2">
+                <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Career Hub</h3>
-              <p className="text-xs text-muted-foreground mt-1">Jobs & opportunities</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">Career Hub</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Jobs</p>
             </button>
             <button
               onClick={() => navigate('/blog')}
-              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-500 text-white mb-3">
-                <Newspaper className="w-4 h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-orange-400 to-red-500 text-white mb-2">
+                <Newspaper className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Security News</h3>
-              <p className="text-xs text-muted-foreground mt-1">Latest updates</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">News</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Updates</p>
             </button>
             <button
               onClick={() => navigate('/support')}
-              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-violet-400 to-purple-500 text-white mb-3">
-                <HelpCircle className="w-4 h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-violet-400 to-purple-500 text-white mb-2">
+                <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Support</h3>
-              <p className="text-xs text-muted-foreground mt-1">FAQ & help</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">Support</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Help</p>
             </button>
             <button
               onClick={() => navigate('/docs')}
-              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 text-white mb-3">
-                <BookOpen className="w-4 h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 text-white mb-2">
+                <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Documentation</h3>
-              <p className="text-xs text-muted-foreground mt-1">User guide</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">Docs</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Guide</p>
             </button>
             <button
               onClick={() => navigate('/security-topics')}
-              className="group glass rounded-xl p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
+              className="group glass rounded-xl p-2.5 sm:p-3 md:p-4 text-left hover:border-primary/50 transition-all duration-300 cyber-border"
             >
-              <div className="inline-flex p-2 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-white mb-3">
-                <Shield className="w-4 h-4" />
+              <div className="inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-white mb-2">
+                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <h3 className="font-medium text-foreground text-sm">Topics</h3>
-              <p className="text-xs text-muted-foreground mt-1">Browse all</p>
+              <h3 className="font-medium text-foreground text-[11px] sm:text-xs md:text-sm leading-tight">Topics</h3>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground mt-0.5">Browse</p>
             </button>
           </div>
         </div>
